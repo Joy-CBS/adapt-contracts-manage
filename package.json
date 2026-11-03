@@ -10,7 +10,10 @@
     "typecheck": "tsc --noEmit",
     "studio:check": "tsx scripts/studio-check.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "f1:setup": "tsx scripts/f1-setup.ts",
+    "f1:ingest": "tsx scripts/f1-ingest.ts",
+    "f1:report": "tsx scripts/f1-report.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
