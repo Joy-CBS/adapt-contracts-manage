@@ -2,6 +2,7 @@
   "name": "F1 계약서 메타데이터 적재 v1",
   "steps": [
     {
+      "id": "adapt-f1-v1-parse",
       "name": "Parse",
       "type": "document-parse",
       "data": {
@@ -21,6 +22,7 @@
       "is_first": true
     },
     {
+      "id": "adapt-f1-v1-extract",
       "name": "Extract",
       "type": "information-extract",
       "data": {
@@ -193,6 +195,7 @@
       "is_first": false
     },
     {
+      "id": "adapt-f1-v1-export",
       "name": "Export - 계약서 메타데이터",
       "type": "export",
       "data": {
