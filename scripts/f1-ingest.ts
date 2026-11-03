@@ -80,7 +80,6 @@ async function processOne(studio: StudioClient, root: string, row: SampleRow, re
       configId,
       fileIds: [rec.fileId!],
       metadata: { sha256: rec.sha256, folder: row.folder.slice(0, 200) },
-      idempotencyKey: `f1-${rec.sha256}-${configId}-${rec.status === "failed" ? Date.now() : 0}`,
     });
     rec.jobId = job.id;
     rec.status = "running";
