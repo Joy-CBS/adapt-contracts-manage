@@ -2,20 +2,25 @@
   "name": "F1 계약서 메타데이터 적재 v1",
   "steps": [
     {
-      "id": "parse",
       "name": "Parse",
       "type": "document-parse",
       "data": {
         "model": "default",
         "mode": "standard",
         "coordinates": true,
-        "output_formats": ["html", "text"]
+        "output_formats": [
+          "html",
+          "text"
+        ]
       },
-      "next_steps": [{ "step_name": "Extract" }],
+      "next_steps": [
+        {
+          "step_name": "Extract"
+        }
+      ],
       "is_first": true
     },
     {
-      "id": "extract",
       "name": "Extract",
       "type": "information-extract",
       "data": {
@@ -27,51 +32,174 @@
         "json_schema": {
           "type": "object",
           "properties": {
-            "contract_title": { "type": "string", "description": "계약서 문서상의 제목 원문 그대로 (예: 광고 콘텐츠 제작 계약서, Paid Partnership Agreement)" },
-            "contract_type": { "type": "string", "description": "계약의 성격을 한국어로 짧게 기술 (예: 인플루언서 유료 협찬 계약, 광고물 제작 용역 계약, 독점 유통 계약, 비밀유지 계약, 부속 합의서)" },
-            "language": { "type": "string", "enum": ["ko", "en", "zh", "ja", "mixed", "other"], "description": "본문의 주 언어" },
-            "signed_date": { "type": "string", "description": "계약 체결일 또는 효력 발생일. YYYY-MM-DD 형식, 없으면 빈 문자열" },
-            "adapt_entity": { "type": "string", "description": "어댑트 측 계약 당사자 법인명 (예: 주식회사 어댑트, Adapt Inc., 주식회사 어로프트, 얼터너티브)" },
-            "adapt_role": { "type": "string", "enum": ["발주·위탁", "공급·수탁", "상호", "기타"], "description": "어댑트가 대가를 지급하고 업무를 맡기면 발주·위탁, 대가를 받고 제품·서비스를 제공하면 공급·수탁, 비밀유지처럼 대칭이면 상호" },
-            "counterparty_name": { "type": "string", "description": "상대방 이름 또는 법인명. 개인이면 SNS 핸들이 있으면 핸들로 기재 (예: @username)" },
-            "counterparty_type": { "type": "string", "enum": ["개인 인플루언서", "개인(기타)", "법인", "에이전시·MCN", "기타"], "description": "상대방 유형" },
-            "brands": { "type": "array", "items": { "type": "string" }, "description": "계약 대상 브랜드 (예: FULLY, FOODOLOGY, EPAIS, OBgE, Duorexin, 닥터데이알)" },
-            "channels": { "type": "array", "items": { "type": "string" }, "description": "콘텐츠·판매 채널 (예: Instagram, TikTok, YouTube, 샤오홍슈, 오프라인 유통)" },
-            "territory": { "type": "string", "description": "계약이 적용되는 국가·지역 (예: 미국, 대만, 중국, 한국, UAE)" },
-            "scope_summary": { "type": "string", "description": "계약상 업무 범위를 한두 문장으로 요약" },
-            "deliverables": { "type": "string", "description": "납품물·게시물의 종류와 수량 요약 (예: 릴스 2건, 스토리 3건)" },
-            "term": { "type": "string", "description": "계약 기간 요약 (예: 2026-05-19부터 3개월, 콘텐츠 납품 완료 시 종료)" },
-            "secondary_use_period": { "type": "string", "description": "콘텐츠 2차 활용·광고 라이선스 기간. 없으면 빈 문자열" },
-            "amount": { "type": "number", "description": "총 계약 금액 숫자 (세금 포함 여부 무관, 확인되는 총액). 없으면 0" },
-            "currency": { "type": "string", "description": "통화 코드 (KRW, USD, CNY, TWD 등). 금액이 없으면 빈 문자열" },
-            "payment_terms": { "type": "string", "description": "지급 시기·방법·세금 처리 요약" },
-            "ip_ownership": { "type": "string", "description": "결과물·콘텐츠의 지식재산권 귀속 조항 요약. 조항이 없으면 '없음'" },
-            "portrait_rights": { "type": "string", "description": "초상권·성명·SNS 계정 사용 허락 및 2차 활용 조항 요약. 조항이 없으면 '없음'" },
-            "exclusivity": { "type": "string", "description": "독점·경업금지(경쟁 브랜드 홍보 제한 등) 조항 요약. 조항이 없으면 '없음'" },
-            "confidentiality": { "type": "string", "description": "비밀유지 조항 요약. 조항이 없으면 '없음'" },
-            "penalty_damages": { "type": "string", "description": "위약금·손해배상·환불 조항 요약. 조항이 없으면 '없음'" },
-            "termination": { "type": "string", "description": "계약 해지 사유·절차 조항 요약. 조항이 없으면 '없음'" },
-            "governing_law_dispute": { "type": "string", "description": "준거법과 분쟁해결(관할 법원·중재) 조항 요약. 조항이 없으면 '없음'" },
-            "notable_terms": { "type": "string", "description": "위 항목 외에 법무 검토 시 눈여겨볼 특이 조항 요약. 없으면 빈 문자열" }
+            "contract_title": {
+              "type": "string",
+              "description": "계약서 문서상의 제목 원문 그대로 (예: 광고 콘텐츠 제작 계약서, Paid Partnership Agreement)"
+            },
+            "contract_type": {
+              "type": "string",
+              "description": "계약의 성격을 한국어로 짧게 기술 (예: 인플루언서 유료 협찬 계약, 광고물 제작 용역 계약, 독점 유통 계약, 비밀유지 계약, 부속 합의서)"
+            },
+            "language": {
+              "type": "string",
+              "enum": [
+                "ko",
+                "en",
+                "zh",
+                "ja",
+                "mixed",
+                "other"
+              ],
+              "description": "본문의 주 언어"
+            },
+            "signed_date": {
+              "type": "string",
+              "description": "계약 체결일 또는 효력 발생일. YYYY-MM-DD 형식, 없으면 빈 문자열"
+            },
+            "adapt_entity": {
+              "type": "string",
+              "description": "어댑트 측 계약 당사자 법인명 (예: 주식회사 어댑트, Adapt Inc., 주식회사 어로프트, 얼터너티브)"
+            },
+            "adapt_role": {
+              "type": "string",
+              "enum": [
+                "발주·위탁",
+                "공급·수탁",
+                "상호",
+                "기타"
+              ],
+              "description": "어댑트가 대가를 지급하고 업무를 맡기면 발주·위탁, 대가를 받고 제품·서비스를 제공하면 공급·수탁, 비밀유지처럼 대칭이면 상호"
+            },
+            "counterparty_name": {
+              "type": "string",
+              "description": "상대방 이름 또는 법인명. 개인이면 SNS 핸들이 있으면 핸들로 기재 (예: @username)"
+            },
+            "counterparty_type": {
+              "type": "string",
+              "enum": [
+                "개인 인플루언서",
+                "개인(기타)",
+                "법인",
+                "에이전시·MCN",
+                "기타"
+              ],
+              "description": "상대방 유형"
+            },
+            "brands": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "계약 대상 브랜드 (예: FULLY, FOODOLOGY, EPAIS, OBgE, Duorexin, 닥터데이알)"
+            },
+            "channels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "콘텐츠·판매 채널 (예: Instagram, TikTok, YouTube, 샤오홍슈, 오프라인 유통)"
+            },
+            "territory": {
+              "type": "string",
+              "description": "계약이 적용되는 국가·지역 (예: 미국, 대만, 중국, 한국, UAE)"
+            },
+            "scope_summary": {
+              "type": "string",
+              "description": "계약상 업무 범위를 한두 문장으로 요약"
+            },
+            "deliverables": {
+              "type": "string",
+              "description": "납품물·게시물의 종류와 수량 요약 (예: 릴스 2건, 스토리 3건)"
+            },
+            "term": {
+              "type": "string",
+              "description": "계약 기간 요약 (예: 2026-05-19부터 3개월, 콘텐츠 납품 완료 시 종료)"
+            },
+            "secondary_use_period": {
+              "type": "string",
+              "description": "콘텐츠 2차 활용·광고 라이선스 기간. 없으면 빈 문자열"
+            },
+            "amount": {
+              "type": "number",
+              "description": "총 계약 금액 숫자 (세금 포함 여부 무관, 확인되는 총액). 없으면 0"
+            },
+            "currency": {
+              "type": "string",
+              "description": "통화 코드 (KRW, USD, CNY, TWD 등). 금액이 없으면 빈 문자열"
+            },
+            "payment_terms": {
+              "type": "string",
+              "description": "지급 시기·방법·세금 처리 요약"
+            },
+            "ip_ownership": {
+              "type": "string",
+              "description": "결과물·콘텐츠의 지식재산권 귀속 조항 요약. 조항이 없으면 '없음'"
+            },
+            "portrait_rights": {
+              "type": "string",
+              "description": "초상권·성명·SNS 계정 사용 허락 및 2차 활용 조항 요약. 조항이 없으면 '없음'"
+            },
+            "exclusivity": {
+              "type": "string",
+              "description": "독점·경업금지(경쟁 브랜드 홍보 제한 등) 조항 요약. 조항이 없으면 '없음'"
+            },
+            "confidentiality": {
+              "type": "string",
+              "description": "비밀유지 조항 요약. 조항이 없으면 '없음'"
+            },
+            "penalty_damages": {
+              "type": "string",
+              "description": "위약금·손해배상·환불 조항 요약. 조항이 없으면 '없음'"
+            },
+            "termination": {
+              "type": "string",
+              "description": "계약 해지 사유·절차 조항 요약. 조항이 없으면 '없음'"
+            },
+            "governing_law_dispute": {
+              "type": "string",
+              "description": "준거법과 분쟁해결(관할 법원·중재) 조항 요약. 조항이 없으면 '없음'"
+            },
+            "notable_terms": {
+              "type": "string",
+              "description": "위 항목 외에 법무 검토 시 눈여겨볼 특이 조항 요약. 없으면 빈 문자열"
+            }
           },
           "required": [
-            "contract_title", "contract_type", "language", "adapt_entity", "adapt_role",
-            "counterparty_type", "brands", "scope_summary", "amount", "currency",
-            "ip_ownership", "portrait_rights", "exclusivity", "confidentiality",
-            "penalty_damages", "termination", "governing_law_dispute"
+            "contract_title",
+            "contract_type",
+            "language",
+            "adapt_entity",
+            "adapt_role",
+            "counterparty_type",
+            "brands",
+            "scope_summary",
+            "amount",
+            "currency",
+            "ip_ownership",
+            "portrait_rights",
+            "exclusivity",
+            "confidentiality",
+            "penalty_damages",
+            "termination",
+            "governing_law_dispute"
           ]
         }
       },
-      "next_steps": [{ "step_name": "Export - 계약서 메타데이터" }],
+      "next_steps": [
+        {
+          "step_name": "Export - 계약서 메타데이터"
+        }
+      ],
       "is_first": false
     },
     {
-      "id": "export",
       "name": "Export - 계약서 메타데이터",
       "type": "export",
       "data": {
         "custom_name": "계약서 메타데이터",
-        "collection": { "table_key": "adapt-contracts-metadata" }
+        "collection": {
+          "table_key": "adapt-contracts-metadata"
+        }
       },
       "next_steps": null,
       "is_first": false
