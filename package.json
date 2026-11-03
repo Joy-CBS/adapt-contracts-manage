@@ -13,7 +13,8 @@
     "db:migrate": "drizzle-kit migrate",
     "f1:setup": "tsx scripts/f1-setup.ts",
     "f1:ingest": "tsx scripts/f1-ingest.ts",
-    "f1:report": "tsx scripts/f1-report.ts"
+    "f1:report": "tsx scripts/f1-report.ts",
+    "f2:taxonomy": "tsx scripts/f2-taxonomy.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",

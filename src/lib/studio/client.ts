@@ -179,6 +179,47 @@ export class StudioClient {
     });
   }
 
+  /**
+   * Studio Chat(동기 JSON). 구조화 출력이 필요하면 jsonSchema를 넘긴다.
+   * 반환: 최종 텍스트(구조화 출력이면 JSON 문자열)와 원본 응답.
+   */
+  async chat(params: {
+    input: string;
+    system?: string;
+    model?: string;
+    jsonSchema?: { name: string; schema: Record<string, unknown> };
+    fileIds?: string[];
+    reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high";
+  }) {
+    const content: Array<Record<string, unknown>> = [
+      ...(params.fileIds ?? []).map((id) => ({ type: "input_file", file_id: id })),
+      { type: "input_text", text: params.input },
+    ];
+    const input: Array<Record<string, unknown>> = [];
+    if (params.system) input.push({ role: "system", content: [{ type: "input_text", text: params.system }] });
+    input.push({ role: "user", content });
+    const res = await this.request<StudioResponse>("/v2/responses", {
+      method: "POST",
+      json: {
+        model: params.model ?? "auto",
+        input,
+        stream: false,
+        background: false,
+        ...(params.reasoningEffort ? { reasoning: { effort: params.reasoningEffort } } : {}),
+        ...(params.jsonSchema
+          ? { text: { format: { type: "json_schema", name: params.jsonSchema.name, schema: params.jsonSchema.schema, strict: false } } }
+          : {}),
+      },
+      retries: 4,
+    });
+    const text = (res.output ?? [])
+      .flatMap((o) => o.content ?? [])
+      .filter((c) => c.type === "output_text" || c.type === "text")
+      .map((c) => c.text)
+      .join("");
+    return { text, response: res };
+  }
+
   getResponse(id: string, include: "last" | "all" = "last") {
     return this.request<StudioResponse>(`/v2/responses/${id}`, { query: { include } });
   }
