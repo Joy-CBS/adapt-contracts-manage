@@ -3,6 +3,8 @@
  * 중단 후 다시 실행하면 완료된 건은 건너뛰고 이어서 처리한다.
  *
  *   npm run f1:ingest -- --sample data/sample-200.json --limit 3 --concurrency 4
+ *   npm run f1:ingest -- --submit-only   # 업로드·실행 요청만 하고 기다리지 않음(실행 환경 시간 제한 대응)
+ *   npm run f1:ingest                    # 다시 실행하면 진행 중 Job 결과를 모은다
  *
  * 결과
  *   data/f1/extract/<sha>.json  추출 메타데이터 + 신뢰도
@@ -65,6 +67,8 @@ function upsert(rec: ContractRecord) {
   saveState(s);
 }
 
+const SUBMIT_ONLY = process.argv.includes("--submit-only");
+
 async function processOne(studio: StudioClient, root: string, row: SampleRow, rec: ContractRecord, agentId: string, configId: string) {
   if (!rec.fileId) {
     const abs = resolveSource(root, row.path);
@@ -86,6 +90,7 @@ async function processOne(studio: StudioClient, root: string, row: SampleRow, re
     rec.error = undefined;
     upsert(rec);
   }
+  if (SUBMIT_ONLY) return rec;
   const done = await studio.waitForResponse(rec.jobId!, { include: "all", timeoutMs: 20 * 60_000 });
   rec.status = done.status === "completed" ? "completed" : done.status === "cancelled" ? "cancelled" : "failed";
   rec.error = done.error ? `${done.error.code ?? ""} ${done.error.message ?? ""}`.trim() : undefined;
@@ -115,6 +120,7 @@ async function main() {
     const sha = crypto.createHash("sha256").update(fs.readFileSync(abs)).digest("hex");
     const rec = state.contracts[sha] ?? { path: row.path, folder: row.folder, sha256: sha };
     if (rec.status === "completed" && fs.existsSync(path.join(dataDir(), "f1", "extract", `${sha}.json`))) continue;
+    if (SUBMIT_ONLY && rec.status === "running") continue;
     queue.push({ row, rec });
   }
   console.log(`대상 ${rows.length}건 중 처리할 건 ${queue.length}건 (동시 ${concurrency})`);
@@ -128,7 +134,7 @@ async function main() {
       if (!item) return;
       try {
         const r = await processOne(studio, root!, item.row, item.rec, agentId!, configId!);
-        if (r.status !== "completed") failed++;
+        if (r.status !== "completed" && !(SUBMIT_ONLY && r.status === "running")) failed++;
         done++;
         const sec = Math.round((Date.now() - started) / 1000);
         console.log(`[${done}] ${r.status} ${item.row.path} ${r.error ?? ""} (${sec}s)`);
