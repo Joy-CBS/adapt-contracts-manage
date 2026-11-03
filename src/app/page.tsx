@@ -1,103 +1,31 @@
-import Image from "next/image";
+const steps = [
+  { id: "F1", title: "기존 계약서 일괄 적재", desc: "Studio Parse·Extract로 메타데이터를 추출해 Collection에 적재" },
+  { id: "F2", title: "카테고리·표준안", desc: "class-generate와 그룹화로 유형 체계와 표준안 후보 도출" },
+  { id: "F3", title: "유형 판단", desc: "신규 계약서가 기존 유형(중복)인지 신규인지 판단, 신규면 유형 생성" },
+  { id: "F4", title: "리스크 분석", desc: "표준안 대비 조항 일탈과 리스크 도출" },
+  { id: "F5", title: "표준양식 변환", desc: "표준양식으로 변환하고 Word 변경기록으로 수정 의견 표시" },
+  { id: "F6", title: "Slack 연동", desc: "검토 요청 채널 후킹, 법무팀 채널로 결과 회신" },
+];
 
 export default function Home() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
+    <div className="space-y-8">
+      <section>
+        <h1 className="text-2xl font-medium">계약서 검토 자동화 PoC</h1>
+        <p className="mt-2 text-neutral-600">
+          어댑트 계약서를 표준계약서 유형별로 분류하고, 신규 검토 요청에 대해 리스크와 수정 의견을 Word
+          변경기록으로 제공합니다.
+        </p>
+      </section>
+      <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {steps.map((s) => (
+          <li key={s.id} className="rounded-xl border border-neutral-200 bg-white p-4">
+            <div className="text-xs text-neutral-400">{s.id}</div>
+            <div className="mt-1 font-medium">{s.title}</div>
+            <p className="mt-1 text-sm text-neutral-600">{s.desc}</p>
           </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        ))}
+      </ol>
     </div>
   );
 }

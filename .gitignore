@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+!.env.example
+
+# 계약서 원본·추출 결과(개인정보 포함) 커밋 금지
+/data/
+*.pdf
+*.docx
