@@ -176,6 +176,13 @@ async function submit(studio: StudioClient) {
   console.log(`제출 ${n}건`);
 }
 
+/** Validate 상세에는 Instruct 원문이 통째로 들어가므로 판정에 필요한 값만 남긴다 */
+function slimChecks(v: unknown) {
+  const c = v as { verdict?: string; checks?: Array<Record<string, unknown>> } | null;
+  if (!c) return null;
+  return { verdict: c.verdict, checks: (c.checks ?? []).map((x) => ({ name: x.name, severity: x.severity, passed: x.passed })) };
+}
+
 async function collect(studio: StudioClient) {
   const store = loadStore();
   const pending = Object.entries(store).filter(([, r]) => r.status === "running");
@@ -195,7 +202,7 @@ async function collect(studio: StudioClient) {
       status: result ? "completed" : "failed",
       result: result ?? undefined,
       verdict: val?.text?.replace(/^"|"$/g, ""),
-      checks: parseStepText(val?.additional_values ?? null),
+      checks: slimChecks(parseStepText(val?.additional_values ?? null)),
       error: result ? undefined : "instruct 결과 JSON 파싱 실패",
     };
   });
