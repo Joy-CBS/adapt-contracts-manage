@@ -14,7 +14,8 @@
     "f1:setup": "tsx scripts/f1-setup.ts",
     "f1:ingest": "tsx scripts/f1-ingest.ts",
     "f1:report": "tsx scripts/f1-report.ts",
-    "f2:taxonomy": "tsx scripts/f2-taxonomy.ts"
+    "f2:taxonomy": "tsx scripts/f2-taxonomy.ts",
+    "f2:classify": "tsx scripts/f2-classify.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
