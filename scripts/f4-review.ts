@@ -97,7 +97,11 @@ ${tpl.status === "draft" ? "※ 이 표준안은 법무팀 확정 전 초안입�
 검토 규칙:
 1. 표준안 조항마다 계약서의 대응 조항을 찾아 일치/일탈/누락을 판단합니다. 표준안에 없는 계약서 조항 중 어댑트에 불리한 것은 "추가조항"(standard_clause_no=0)으로 적습니다.
 2. 가드레일 허용 범위 안이면 "일치", 벗어나면 "일탈"입니다. 단어가 달라도 의미가 같으면 일치입니다.
-3. severity는 표준안의 "일탈 시" 등급을 기본으로 하되 실제 영향에 맞게 조정합니다. 일치는 none.
+3. severity는 실제 법적·재무적 영향으로 정합니다. 일치는 none.
+   - high: 가드레일의 마지노선을 넘었거나, 어댑트가 권리를 잃거나(콘텐츠 이용 불가 등) 무제한·과도한 책임을 지는 경우, 분쟁 시 어댑트를 보호할 핵심 조항(지재권·2차 활용·손해배상·해지 등)이 없는 경우
+   - medium: 가드레일 권장 범위를 벗어나 협상이 필요하지만 당장 큰 손해로 이어지지는 않는 경우
+   - low: 운영 세부사항(일정 표기, 파일 규격, 보고 주기 등)이 없거나 문구만 보완하면 되는 경우
+   - 표준안이 초안이라 이상적인 수준으로 쓰여 있으므로, 업계에서 통상 수용되는 수준이면 일치 또는 low로 판단합니다.
 4. suggestion은 계약서와 같은 언어로, 그대로 붙여 넣을 수 있는 조항 문구로 씁니다. 대괄호 자리표시자는 계약서의 실제 값으로 채웁니다.
 5. 금액·지급 같은 커머셜 조항은 법적 조항과 구분해 판단합니다.
 6. 주민등록번호·연락처·주소·계좌 등 개인정보는 발췌하지 말고 [개인정보]로 가립니다.
@@ -184,7 +188,8 @@ async function collect(studio: StudioClient) {
     }
     const ins = res.output?.find((o) => o.step_type === "instruct")?.content?.[0];
     const val = res.output?.find((o) => o.step_type === "validate")?.content?.[0];
-    const result = parseStepText<ReviewResult>(ins?.text);
+    // Instruct 출력에 섞이는 내부 인용 표시(【†3】)를 제거한다
+    const result = parseStepText<ReviewResult>(ins?.text?.replace(/【[^】]*†[^】]*】/g, "").replace(/\s+(?=[.,])/g, ""));
     store[sha] = {
       ...r,
       status: result ? "completed" : "failed",
