@@ -1,4 +1,5 @@
 import {
+  boolean,
   doublePrecision,
   integer,
   jsonb,
@@ -18,8 +19,8 @@ export const contractSource = pgEnum("contract_source", ["legacy", "slack", "upl
 export const contractStatus = pgEnum("contract_status", [
   "registered", // 업로드만 됨
   "processing", // Studio Job 진행 중
-  "analyzed", // 메타데이터 추출 완료
-  "reviewed", // 리스크 분석·변경기록까지 완료
+  "analyzed", // 메타데이터·유형 판단 완료
+  "reviewed", // 리스크 분석까지 완료
   "failed",
 ]);
 export const categoryOrigin = pgEnum("category_origin", [
@@ -39,7 +40,11 @@ export const categories = pgTable("categories", {
   /** Studio Classify의 클래스 값과 동일한 키 */
   classKey: text("class_key").notNull().unique(),
   name: text("name").notNull(),
-  description: text("description"),
+  definition: text("definition"),
+  includeCriteria: text("include_criteria"),
+  excludeCriteria: text("exclude_criteria"),
+  standardizable: boolean("standardizable").notNull().default(true),
+  standardizableReason: text("standardizable_reason"),
   origin: categoryOrigin("origin").notNull(),
   status: categoryStatus("status").notNull().default("draft"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -53,9 +58,8 @@ export const standardTemplates = pgTable("standard_templates", {
   title: text("title").notNull(),
   source: templateSource("source").notNull(),
   version: integer("version").notNull().default(1),
-  /** 조항 구조(JSON): [{ no, title, text, guardrail }] */
-  clauses: jsonb("clauses"),
-  docxUrl: text("docx_url"),
+  /** 표준안 전체(StandardTemplate: 국·영문 조항, 가드레일) */
+  body: jsonb("body").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -70,11 +74,12 @@ export const contracts = pgTable("contracts", {
   blobUrl: text("blob_url"),
   studioFileId: text("studio_file_id"),
   studioJobId: text("studio_job_id"),
+  studioClassifyJobId: text("studio_classify_job_id"),
   status: contractStatus("status").notNull().default("registered"),
   language: text("language"),
   categoryId: uuid("category_id").references(() => categories.id),
   classifyConfidence: doublePrecision("classify_confidence"),
-  /** F1 추출 메타데이터(당사자·브랜드·금액·기간 등) */
+  /** F1 추출 메타데이터(당사자·브랜드·금액·기간·조항 요약) */
   metadata: jsonb("metadata"),
   slackChannel: text("slack_channel"),
   slackTs: text("slack_ts"),
@@ -89,16 +94,20 @@ export const reviews = pgTable("reviews", {
     .notNull()
     .references(() => contracts.id),
   templateId: uuid("template_id").references(() => standardTemplates.id),
-  /** Validate 판정 green/yellow/red */
+  /** Studio Validate 판정 green/yellow/red */
   verdict: text("verdict"),
-  /** [{ clause, severity, standard, actual, reason, suggestion }] */
-  risks: jsonb("risks"),
+  highCount: integer("high_count").notNull().default(0),
+  mediumCount: integer("medium_count").notNull().default(0),
+  lowCount: integer("low_count").notNull().default(0),
+  /** ReviewResult: 요약·의견·조항별 검토 */
+  result: jsonb("result"),
+  /** Validate check 상세 */
+  checks: jsonb("checks"),
   studioJobId: text("studio_job_id"),
-  redlineDocxUrl: text("redline_docx_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** Studio 리소스 ID 저장소(Agent·Config·Collection 등). key 예: agent.ingest */
+/** Studio 리소스 ID 저장소(Agent·Config·Collection 등). key 예: agent.review */
 export const studioResources = pgTable("studio_resources", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),

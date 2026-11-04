@@ -1,5 +1,5 @@
 {
-  "id": "c4a323ce-3e21-4c0b-8518-7f91a0a65c67",
+  "id": "910653cc-544b-4725-a99e-023cd4ae4593",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -27,8 +27,33 @@
           "primaryKey": false,
           "notNull": true
         },
-        "description": {
-          "name": "description",
+        "definition": {
+          "name": "definition",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "include_criteria": {
+          "name": "include_criteria",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "exclude_criteria": {
+          "name": "exclude_criteria",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "standardizable": {
+          "name": "standardizable",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "standardizable_reason": {
+          "name": "standardizable_reason",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -128,6 +153,12 @@
         },
         "studio_job_id": {
           "name": "studio_job_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "studio_classify_job_id": {
+          "name": "studio_classify_job_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -256,20 +287,41 @@
           "primaryKey": false,
           "notNull": false
         },
-        "risks": {
-          "name": "risks",
+        "high_count": {
+          "name": "high_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "medium_count": {
+          "name": "medium_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "low_count": {
+          "name": "low_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "result": {
+          "name": "result",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "checks": {
+          "name": "checks",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
         "studio_job_id": {
           "name": "studio_job_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "redline_docx_url": {
-          "name": "redline_docx_url",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -354,17 +406,11 @@
           "notNull": true,
           "default": 1
         },
-        "clauses": {
-          "name": "clauses",
+        "body": {
+          "name": "body",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false
-        },
-        "docx_url": {
-          "name": "docx_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",

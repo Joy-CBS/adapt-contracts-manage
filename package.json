@@ -10,20 +10,25 @@
     "typecheck": "tsc --noEmit",
     "studio:check": "tsx scripts/studio-check.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
     "f1:setup": "tsx scripts/f1-setup.ts",
     "f1:ingest": "tsx scripts/f1-ingest.ts",
     "f1:report": "tsx scripts/f1-report.ts",
     "f2:taxonomy": "tsx scripts/f2-taxonomy.ts",
-    "f2:classify": "tsx scripts/f2-classify.ts"
+    "f2:classify": "tsx scripts/f2-classify.ts",
+    "f2:templates": "tsx scripts/f2-templates.ts",
+    "f4:review": "tsx scripts/f4-review.ts",
+    "db:seed": "tsx scripts/db-seed.ts"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.5.15",
     "@neondatabase/serverless": "^1.2.0",
     "@vercel/blob": "^2.8.2",
     "drizzle-orm": "^0.45.4",
+    "jszip": "^3.10.2",
     "next": "15.5.28",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "server-only": "^0.0.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {

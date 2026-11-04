@@ -198,26 +198,86 @@ export class StudioClient {
     const input: Array<Record<string, unknown>> = [];
     if (params.system) input.push({ role: "system", content: [{ type: "input_text", text: params.system }] });
     input.push({ role: "user", content });
-    const res = await this.request<StudioResponse>("/v2/responses", {
-      method: "POST",
-      json: {
-        model: params.model ?? "auto",
-        input,
-        stream: false,
-        background: false,
-        ...(params.reasoningEffort ? { reasoning: { effort: params.reasoningEffort } } : {}),
-        ...(params.jsonSchema
-          ? { text: { format: { type: "json_schema", name: params.jsonSchema.name, schema: params.jsonSchema.schema, strict: false } } }
-          : {}),
-      },
-      retries: 4,
-    });
-    const text = (res.output ?? [])
-      .flatMap((o) => o.content ?? [])
-      .filter((c) => c.type === "output_text" || c.type === "text")
-      .map((c) => c.text)
-      .join("");
-    return { text, response: res };
+    const body = {
+      model: params.model ?? "auto",
+      input,
+      stream: true,
+      background: false,
+      ...(params.reasoningEffort ? { reasoning: { effort: params.reasoningEffort } } : {}),
+      ...(params.jsonSchema
+        ? { text: { format: { type: "json_schema", name: params.jsonSchema.name, schema: params.jsonSchema.schema, strict: false } } }
+        : {}),
+    };
+    // 긴 생성은 동기 JSON이 게이트웨이 시간 제한에 걸릴 수 있어 SSE로 받는다
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.chatStream(body);
+      } catch (e) {
+        const retriable = !(e instanceof StudioApiError) || e.status === 429 || e.status >= 500;
+        if (!retriable || attempt >= 3) throw e;
+        await sleep(2 ** attempt * 3000);
+      }
+    }
+  }
+
+  private async chatStream(body: Record<string, unknown>) {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${this.key}`,
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+    };
+    if (this.projectId) headers["x-project-id"] = this.projectId;
+    const res = await fetch(this.base + "/v2/responses", { method: "POST", headers, body: JSON.stringify(body) });
+    if (!res.ok || !res.body) {
+      const t = await res.text();
+      let parsed: StudioError | string = t;
+      try {
+        parsed = JSON.parse(t);
+      } catch {}
+      throw new StudioApiError(res.status, parsed, res.headers.get("x-request-id"));
+    }
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    let text = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let idx: number;
+      while ((idx = buf.indexOf("\n\n")) >= 0) {
+        const frame = buf.slice(0, idx);
+        buf = buf.slice(idx + 2);
+        const event = /^event: ?(.*)$/m.exec(frame)?.[1]?.trim();
+        const dataLine = frame
+          .split("\n")
+          .filter((l) => l.startsWith("data:"))
+          .map((l) => l.slice(5).trimStart())
+          .join("\n");
+        if (!dataLine || dataLine === "[DONE]") continue;
+        let data: Record<string, unknown>;
+        try {
+          data = JSON.parse(dataLine);
+        } catch {
+          continue;
+        }
+        const type = event ?? (data.type as string | undefined);
+        if (type === "response.output_text.delta") text += String(data.delta ?? "");
+        else if (type === "response.completed") {
+          const r = data.response as StudioResponse;
+          const full = (r?.output ?? [])
+            .flatMap((o) => o.content ?? [])
+            .filter((c) => c.type === "output_text" || c.type === "text")
+            .map((c) => c.text)
+            .join("");
+          return { text: full || text, response: r };
+        } else if (type === "response.failed" || type === "response.incomplete" || type === "error") {
+          const r = (data.response ?? data) as { error?: { message?: string; code?: string }; incomplete_details?: unknown };
+          throw new StudioApiError(500, JSON.stringify(r.error ?? r.incomplete_details ?? data).slice(0, 500));
+        }
+      }
+    }
+    throw new StudioApiError(502, "SSE가 완료 이벤트 없이 종료됨");
   }
 
   getResponse(id: string, include: "last" | "all" = "last") {

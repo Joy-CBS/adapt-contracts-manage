@@ -13,7 +13,7 @@ import path from "node:path";
 import { StudioClient, parseStepText, sleep } from "@/lib/studio/client";
 import type { ConfigStep } from "@/lib/studio/types";
 import { dataDir, loadState, saveState } from "@/lib/state";
-import type { Category } from "./f2-taxonomy";
+import type { Category } from "@/lib/contracts";
 
 export const NEW_TYPE_KEY = "new_type";
 
@@ -109,17 +109,24 @@ async function submit(studio: StudioClient) {
 async function collect(studio: StudioClient) {
   const store = loadStore();
   const pending = Object.entries(store).filter(([, r]) => r.status === "running");
-  for (const [sha, r] of pending) {
-    const res = await studio.getResponse(r.jobId, "last");
-    if (res.status === "in_progress" || res.status === "queued" || res.status === "cancelling") continue;
-    if (res.status !== "completed") {
-      store[sha] = { ...r, status: "failed", error: res.error?.message };
-      continue;
+  let i = 0;
+  async function worker() {
+    for (;;) {
+      const item = pending[i++];
+      if (!item) return;
+      const [sha, r] = item;
+      const res = await studio.getResponse(r.jobId, "last");
+      if (res.status === "in_progress" || res.status === "queued" || res.status === "cancelling") continue;
+      if (res.status !== "completed") {
+        store[sha] = { ...r, status: "failed", error: res.error?.message };
+        continue;
+      }
+      const c = res.output?.find((o) => o.step_type === "document-classify")?.content?.[0] ?? res.output?.at(-1)?.content?.[0];
+      const extra = parseStepText<Record<string, unknown>>(c?.additional_values ?? null);
+      store[sha] = { jobId: r.jobId, status: "completed", label: c?.text?.replace(/^"|"$/g, ""), confidence: extra?.confidence ?? extra };
     }
-    const c = res.output?.find((o) => o.step_type === "document-classify")?.content?.[0] ?? res.output?.at(-1)?.content?.[0];
-    const extra = parseStepText<Record<string, unknown>>(c?.additional_values ?? null);
-    store[sha] = { jobId: r.jobId, status: "completed", label: c?.text?.replace(/^"|"$/g, ""), confidence: extra?.confidence ?? extra };
   }
+  await Promise.all(Array.from({ length: 10 }, worker));
   saveStore(store);
   const stat = Object.values(store).reduce<Record<string, number>>((a, r) => ((a[r.status] = (a[r.status] ?? 0) + 1), a), {});
   console.log("상태", stat);

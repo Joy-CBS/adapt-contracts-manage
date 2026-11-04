@@ -7,7 +7,11 @@ CREATE TABLE "categories" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"class_key" text NOT NULL,
 	"name" text NOT NULL,
-	"description" text,
+	"definition" text,
+	"include_criteria" text,
+	"exclude_criteria" text,
+	"standardizable" boolean DEFAULT true NOT NULL,
+	"standardizable_reason" text,
 	"origin" "category_origin" NOT NULL,
 	"status" "category_status" DEFAULT 'draft' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -24,6 +28,7 @@ CREATE TABLE "contracts" (
 	"blob_url" text,
 	"studio_file_id" text,
 	"studio_job_id" text,
+	"studio_classify_job_id" text,
 	"status" "contract_status" DEFAULT 'registered' NOT NULL,
 	"language" text,
 	"category_id" uuid,
@@ -42,9 +47,12 @@ CREATE TABLE "reviews" (
 	"contract_id" uuid NOT NULL,
 	"template_id" uuid,
 	"verdict" text,
-	"risks" jsonb,
+	"high_count" integer DEFAULT 0 NOT NULL,
+	"medium_count" integer DEFAULT 0 NOT NULL,
+	"low_count" integer DEFAULT 0 NOT NULL,
+	"result" jsonb,
+	"checks" jsonb,
 	"studio_job_id" text,
-	"redline_docx_url" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -54,8 +62,7 @@ CREATE TABLE "standard_templates" (
 	"title" text NOT NULL,
 	"source" "template_source" NOT NULL,
 	"version" integer DEFAULT 1 NOT NULL,
-	"clauses" jsonb,
-	"docx_url" text,
+	"body" jsonb NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint

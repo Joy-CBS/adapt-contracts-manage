@@ -9,18 +9,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { StudioClient } from "@/lib/studio/client";
 import { dataDir, loadState } from "@/lib/state";
+import type { Category } from "@/lib/contracts";
 
-export type Category = {
-  class_key: string;
-  name: string;
-  definition: string;
-  include_criteria: string;
-  exclude_criteria: string;
-  typical_clauses: string[];
-  standardizable: boolean;
-  standardizable_reason: string;
-  member_ids: number[];
-};
 
 const SCHEMA = {
   type: "object",

@@ -1,0 +1,183 @@
+{
+  "name": "리스크 검토 v1",
+  "steps": [
+    {
+      "id": "adapt-review-v1-parse",
+      "name": "Parse",
+      "type": "document-parse",
+      "data": {
+        "model": "default",
+        "mode": "standard",
+        "coordinates": true,
+        "output_formats": [
+          "html",
+          "text"
+        ]
+      },
+      "next_steps": [
+        {
+          "step_name": "Review"
+        }
+      ],
+      "is_first": true
+    },
+    {
+      "id": "adapt-review-v1-instruct",
+      "name": "Review",
+      "type": "instruct",
+      "data": {
+        "model": "default",
+        "response_format": {
+          "type": "json_schema",
+          "json_schema": {
+            "name": "contract_review",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "summary": {
+                  "type": "string",
+                  "description": "계약 개요 한두 문장 (한국어)"
+                },
+                "overall_opinion": {
+                  "type": "string",
+                  "description": "법무팀 검토 의견 요약: 서명 전 반드시 고칠 점 위주 (한국어)"
+                },
+                "is_high_value": {
+                  "type": "boolean",
+                  "description": "총 계약 금액이 1억 원(또는 그 상당 외화) 이상이면 true"
+                },
+                "clause_reviews": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "standard_clause_no": {
+                        "type": "integer",
+                        "description": "대응하는 표준안 조항 번호. 표준안에 없는 추가 조항이면 0"
+                      },
+                      "standard_clause_title": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "일치",
+                          "일탈",
+                          "누락",
+                          "추가조항"
+                        ]
+                      },
+                      "severity": {
+                        "type": "string",
+                        "enum": [
+                          "high",
+                          "medium",
+                          "low",
+                          "none"
+                        ]
+                      },
+                      "contract_excerpt": {
+                        "type": "string",
+                        "description": "계약서 원문 발췌(원문 언어 그대로). 누락이면 빈 문자열. 개인정보는 [개인정보]로 가림"
+                      },
+                      "issue": {
+                        "type": "string",
+                        "description": "표준안·가드레일 대비 문제점과 어댑트 리스크 (한국어). 일치면 빈 문자열"
+                      },
+                      "suggestion": {
+                        "type": "string",
+                        "description": "계약서 언어로 쓴 수정 제안 조항 문구. 일치면 빈 문자열"
+                      },
+                      "suggestion_ko": {
+                        "type": "string",
+                        "description": "수정 제안의 국문. 계약서가 국문이면 suggestion과 같음"
+                      }
+                    },
+                    "required": [
+                      "standard_clause_no",
+                      "standard_clause_title",
+                      "status",
+                      "severity",
+                      "contract_excerpt",
+                      "issue",
+                      "suggestion",
+                      "suggestion_ko"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "summary",
+                "overall_opinion",
+                "is_high_value",
+                "clause_reviews"
+              ]
+            }
+          }
+        }
+      },
+      "next_steps": [
+        {
+          "step_name": "Verdict"
+        }
+      ],
+      "is_first": false
+    },
+    {
+      "id": "adapt-review-v1-validate",
+      "name": "Verdict",
+      "type": "validate",
+      "data": {
+        "checks": [
+          {
+            "name": "고위험 조항 없음",
+            "severity": "error",
+            "condition": {
+              "left": {
+                "nodeType": "instruct",
+                "nodeName": "Review",
+                "field": "content"
+              },
+              "operator": "matches",
+              "right": {
+                "const": "^(?![\\s\\S]*\"severity\"\\s*:\\s*\"high\")[\\s\\S]*$"
+              }
+            }
+          },
+          {
+            "name": "중위험 조항 없음",
+            "severity": "warning",
+            "condition": {
+              "left": {
+                "nodeType": "instruct",
+                "nodeName": "Review",
+                "field": "content"
+              },
+              "operator": "matches",
+              "right": {
+                "const": "^(?![\\s\\S]*\"severity\"\\s*:\\s*\"medium\")[\\s\\S]*$"
+              }
+            }
+          },
+          {
+            "name": "고액 계약 아님(1억 원 미만)",
+            "severity": "warning",
+            "condition": {
+              "left": {
+                "nodeType": "instruct",
+                "nodeName": "Review",
+                "field": "content"
+              },
+              "operator": "matches",
+              "right": {
+                "const": "^(?![\\s\\S]*\"is_high_value\"\\s*:\\s*true)[\\s\\S]*$"
+              }
+            }
+          }
+        ]
+      },
+      "next_steps": null,
+      "is_first": false
+    }
+  ]
+}
