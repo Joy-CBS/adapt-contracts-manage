@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+type DbStatus = { mode: "neon" | "pglite" | "missing"; envVar?: string; reachable: boolean | null; error?: string };
 
 export default function AdminPage() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -10,6 +12,14 @@ export default function AdminPage() {
   const [state, setState] = useState<"idle" | "running" | "done" | "error">("idle");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [db, setDb] = useState<DbStatus | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/seed")
+      .then((r) => r.json())
+      .then(setDb)
+      .catch(() => setDb(null));
+  }, []);
 
   function pick(f: File | null | undefined) {
     if (!f) return;
@@ -56,6 +66,8 @@ export default function AdminPage() {
           분석 결과 묶음 파일을 올리면 이 사이트의 DB에 적재합니다. 기존 계약서 분석 결과는 새 묶음으로 교체됩니다.
         </p>
       </div>
+
+      <DbBadge db={db} />
 
       <div className="space-y-4 rounded-xl border border-neutral-200 bg-white p-4">
         <div className="text-sm text-neutral-700">
@@ -111,6 +123,28 @@ export default function AdminPage() {
           </Link>
         )}
       </div>
+    </div>
+  );
+}
+
+function DbBadge({ db }: { db: DbStatus | null }) {
+  if (!db) return <p className="text-sm text-neutral-400">DB 연결 상태 확인 중…</p>;
+  if (db.mode === "missing")
+    return (
+      <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700 ring-1 ring-red-200">
+        DB가 연결되어 있지 않습니다. Vercel 프로젝트의 <b>Storage</b> 탭에서 Neon DB를 이 프로젝트에 <b>Connect</b> 한 뒤{" "}
+        <b>Deployments → Redeploy</b> 하세요.
+      </div>
+    );
+  if (db.reachable === false)
+    return (
+      <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700 ring-1 ring-red-200">
+        DB에 접속하지 못했습니다 ({db.envVar ?? db.mode}): {db.error}
+      </div>
+    );
+  return (
+    <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 ring-1 ring-emerald-200">
+      DB 연결 정상 · {db.mode === "neon" ? `Neon (${db.envVar})` : "로컬 내장 DB"}
     </div>
   );
 }
