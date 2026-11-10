@@ -199,7 +199,7 @@ export class StudioClient {
     if (params.system) input.push({ role: "system", content: [{ type: "input_text", text: params.system }] });
     input.push({ role: "user", content });
     const body = {
-      model: params.model ?? "auto",
+      model: params.model ?? "solar-pro4", // 추론 모델 SP4로 통일
       input,
       stream: true,
       background: false,

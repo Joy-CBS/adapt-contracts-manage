@@ -15,52 +15,47 @@ Upstage Studio(Document Agent API v2)를 최대한 활용해 어댑트(파이노
 | 웹·API | Next.js 15 (App Router, TypeScript) | Vercel 배포 |
 | 문서 AI | Upstage Studio API `https://api.upstage.ai/v2` | 키는 서버에서만 사용 |
 | DB | Postgres + Drizzle ORM | 배포: Neon(`DATABASE_URL`), 로컬: 내장 PGlite(`data/pglite`) |
-| Word 변경기록 | 자체 OOXML 생성(`src/lib/redline.ts`) | 다운로드 시 즉석 생성, 별도 저장소 불필요 |
+| Word 변경기록 | 어댑트 표준 원본 .docx에 변경 추적·메모(`src/lib/redline-v2.ts`) | 다운로드 시 즉석 생성 |
+| 글꼴 | Pretendard(가변, 동적 서브셋) | `pretendard` 패키지 |
 | 접근 제어 | 로그인 화면 + 서명 쿠키(`DEMO_USER`/`DEMO_PASSWORD`) | 외부 공유 데모 보호, 30일 유지 |
 
-## Studio 리소스
+## Studio 리소스 (v2, 추론 모델 solar-pro4)
 
 | Agent | Workflow | 용도 |
 |---|---|---|
-| 어댑트 계약서 적재 (F1) | Parse → Extract(메타데이터 26개 필드) → Export(Collection) | 기존 계약서 적재 |
-| 어댑트 계약서 유형 판단 (F2·F3) | Parse → Classify(15개 유형 + `new_type`) | 표준계약서 유형 판단 |
-| 어댑트 계약서 리스크 검토 (F4) | Parse → Instruct(표준안·가드레일은 실행 요청으로 전달) → Validate | 조항별 리스크, red/yellow/green 판정 |
+| 어댑트 계약서 적재 (F1) | Parse → Extract(26개 필드, solar-pro4) → Export(Collection) | 계약서 적재 |
+| 어댑트 계약서 유형 판단 v2 | Parse → Classify(상위 5종 + 기타) → Rationale(Instruct, 49종 근거) | 유형 판단 + 분류 근거 |
+| 어댑트 계약서 리스크 검토 v2 | Parse → Instruct(유형별 플레이북 고정) → Validate | 항목별 사실 → 수정 필요/변호사 확인/참고 |
 
-Config 정의는 `studio/*.json`에 있고, 생성된 ID는 `data/state.json`에 기록됩니다.
+같은 Workflow를 GPT(Studio 기본 모델)로도 만들어 성능을 비교했다(`scripts/v2-compare.ts`).
 
-## 실행 순서
+## 실행 순서 (v2)
 
 ```bash
 npm install
-cp .env.example .env            # UPSTAGE_API_KEY 등 채우기
-npm run studio:check            # Studio 연결 확인
-
-npm run f1:setup                # 적재 Agent·Config 생성
-npm run f1:ingest -- --submit-only   # 업로드·실행 요청
-npm run f1:ingest               # 결과 수집 (data/f1)
-npm run f1:report               # 분포·누락 요약, contracts.csv
-
-npm run f2:taxonomy             # 유형 체계 초안 (data/f2/taxonomy.json)
-npm run f2:classify -- setup    # 유형 판단 Agent 생성
-npm run f2:classify -- submit && npm run f2:classify -- collect
-npm run f2:templates            # 유형별 임시 표준안 (data/f2/templates)
-
-npm run f4:review -- setup      # 리스크 검토 Agent 생성
-npm run f4:review -- submit && npm run f4:review -- collect   # data/f4/reviews.json
-
-npm run db:seed                 # 결과를 DB에 적재 (DATABASE_URL 없으면 로컬 PGlite)
-npm run dev                     # http://localhost:3000
+cp .env.example .env                      # UPSTAGE_API_KEY 등
+# 어댑트 전달자료를 data/adapt/{spec,kb,standards}에 둔다(저장소에 넣지 않음)
+npx tsx scripts/v2-classify.ts setup      # 유형 판단 Agent·Config(sp4, gpt)
+npx tsx scripts/v2-classify.ts submit sp4 && npx tsx scripts/v2-classify.ts collect sp4
+npx tsx scripts/v2-extract.ts setup && npx tsx scripts/v2-extract.ts submit && npx tsx scripts/v2-extract.ts collect
+npx tsx scripts/v2-review.ts setup        # 리스크 검토 Agent·유형별 Config
+npx tsx scripts/v2-review.ts submit sp4 && npx tsx scripts/v2-review.ts collect sp4
+npx tsx scripts/v2-compare.ts             # GPT vs SP4 비교 지표(data/v2/analysis)
+npm run db:seed                           # DB 적재 + data/seed-bundle.json.gz 생성
+npm run dev
 ```
 
 ## 화면
 
 | 경로 | 내용 |
 |---|---|
-| `/` | 요약 지표, 처리 흐름, 많이 쓰이는 유형 |
-| `/categories` | 카테고리 맵: 유형별 건수·표준안 상태·정형화 판단 |
-| `/categories/[key]` | 유형 정의·포함/제외 기준, 표준안 조항(국·영문, 가드레일), 소속 계약서 |
-| `/contracts` | 계약서 목록: 유형·판정·리스크 수 필터 |
-| `/contracts/[id]` | 검토 의견, 조항별 원문 vs 수정 제안, 메타데이터, **Word 변경기록 다운로드** |
+| `/` | 검토 담당자 할 일: 분류 확인 → 변호사 확인 요청 → 수정본 보내기 → 답변 기록 순서와 바로가기 |
+| `/classify` | AI 분류 확인: 근거 수준별 목록, i 버튼(분류 근거), 승인·다른 유형으로·기타로, 근거 충분 일괄 승인 |
+| `/lawyer` | 변호사 확인 항목: 요청 전·답변 대기·답변 완료, 질문 목록 복사, 답변 기록 |
+| `/contracts` | 계약서 목록: 판정·유형·분류 상태 필터 |
+| `/contracts/[id]` | 항목별 판단 이유·근거·변호사 질문, 분류 확인, 표준양식 변경기록(.docx) |
+| `/categories` | 검토 범위(상위 5종 + 기타)와 어댑트 표준 |
+| `/categories/[key]` | 분류 기준, 표준 원문, 조항별 결과 분포, 기타의 세부 유형 |
 
 ## 작업 단위
 

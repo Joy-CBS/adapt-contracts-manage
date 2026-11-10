@@ -4,16 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const items = [
-  { href: "/", label: "표준화 현황", match: (p: string) => p === "/" },
+  { href: "/", label: "할 일", match: (p: string) => p === "/" },
+  { href: "/classify", label: "분류 확인", match: (p: string) => p.startsWith("/classify") },
+  { href: "/lawyer", label: "변호사 확인", match: (p: string) => p.startsWith("/lawyer") },
+  { href: "/contracts", label: "계약서", match: (p: string) => p.startsWith("/contracts") },
   { href: "/categories", label: "표준계약서", match: (p: string) => p.startsWith("/categories") },
-  { href: "/contracts", label: "계약서 검토", match: (p: string) => p.startsWith("/contracts") },
 ];
 
 export function Nav() {
   const path = usePathname();
   if (path === "/login") return null;
   return (
-    <nav className="flex h-full gap-1 text-sm">
+    <nav className="-mx-1 flex h-full gap-0.5 overflow-x-auto text-sm sm:gap-1">
       {items.map((it) => {
         const active = it.match(path);
         return (

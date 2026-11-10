@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
-  --font-serif: "Noto Serif KR", "AppleMyungjo", serif;
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  /* 계약서 문구도 Pretendard로 통일(본문과 구분은 크기·색으로) */
+  --font-serif: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", sans-serif;
 
   --color-ink: #1b2536;
   --color-ink-soft: #3a4558;

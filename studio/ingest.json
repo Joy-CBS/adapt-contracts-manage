@@ -1,8 +1,8 @@
 {
-  "name": "F1 계약서 메타데이터 적재 v1",
+  "name": "F1 계약서 메타데이터 적재 v2",
   "steps": [
     {
-      "id": "adapt-f1-v1-parse",
+      "id": "adapt-f1-v2-parse",
       "name": "Parse",
       "type": "document-parse",
       "data": {
@@ -22,13 +22,13 @@
       "is_first": true
     },
     {
-      "id": "adapt-f1-v1-extract",
+      "id": "adapt-f1-v2-extract",
       "name": "Extract",
       "type": "information-extract",
       "data": {
-        "model": "default",
+        "model": "solar-pro4",
         "mode": "standard",
-        "confidence": true,
+        "confidence": false,
         "location": false,
         "system_prompt": "당신은 화장품·식품 브랜드 회사 어댑트(Adapt Inc.)의 법무팀을 돕는 계약서 분석가입니다. 계약서는 한국어·영어·중국어 등 여러 언어로 작성될 수 있으며, 모든 요약 값은 한국어로 작성합니다. 계약서에 없는 내용은 추측하지 말고 빈 문자열로 둡니다. 주민등록번호·여권번호·전화번호·이메일·주소·계좌번호 등 개인 식별 정보는 어떤 필드에도 옮겨 적지 않습니다.",
         "json_schema": {
@@ -195,7 +195,7 @@
       "is_first": false
     },
     {
-      "id": "adapt-f1-v1-export",
+      "id": "adapt-f1-v2-export",
       "name": "Export - 계약서 메타데이터",
       "type": "export",
       "data": {

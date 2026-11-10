@@ -2,9 +2,51 @@ import Link from "next/link";
 
 export const VERDICT: Record<string, { label: string; cls: string; dot: string }> = {
   red: { label: "수정 필요", cls: "bg-redline-tint text-redline", dot: "bg-redline" },
-  yellow: { label: "확인 필요", cls: "bg-caution-tint text-caution", dot: "bg-caution" },
-  green: { label: "표준 부합", cls: "bg-comply-tint text-comply", dot: "bg-comply" },
+  yellow: { label: "변호사 확인", cls: "bg-caution-tint text-caution", dot: "bg-caution" },
+  green: { label: "기준 충족", cls: "bg-comply-tint text-comply", dot: "bg-comply" },
 };
+
+export const DECISION: Record<string, { label: string; cls: string; border: string }> = {
+  risk: { label: "수정 필요", cls: "bg-redline-tint text-redline", border: "border-l-redline" },
+  needs_lawyer: { label: "변호사 확인", cls: "bg-caution-tint text-caution", border: "border-l-caution" },
+  note: { label: "참고", cls: "bg-line/60 text-ink-soft", border: "border-l-line" },
+  ok: { label: "기준 충족", cls: "bg-comply-tint text-comply", border: "border-l-comply" },
+};
+
+export const GRADE: Record<string, { label: string; cls: string }> = {
+  high: { label: "필수", cls: "text-redline" },
+  medium: { label: "협상가능", cls: "text-caution" },
+  low: { label: "참고", cls: "text-slate" },
+  none: { label: "", cls: "text-slate" },
+};
+
+export const LEVEL: Record<string, { label: string; cls: string; dot: string }> = {
+  strong: { label: "근거 충분", cls: "bg-comply-tint text-comply", dot: "bg-comply" },
+  medium: { label: "근거 보통", cls: "bg-insert-tint text-insert", dot: "bg-insert" },
+  weak: { label: "확인 필요", cls: "bg-caution-tint text-caution", dot: "bg-caution" },
+};
+
+export const CLASSIFY_STATE: Record<string, { label: string; cls: string }> = {
+  suggested: { label: "승인 대기", cls: "bg-caution-tint text-caution" },
+  approved: { label: "승인됨", cls: "bg-comply-tint text-comply" },
+  changed: { label: "담당자 변경", cls: "bg-insert-tint text-insert" },
+};
+
+export function DecisionPill({ decision }: { decision: string }) {
+  const d = DECISION[decision] ?? DECISION.note;
+  return <Pill cls={d.cls}>{d.label}</Pill>;
+}
+
+export function LevelPill({ level }: { level?: string | null }) {
+  const l = LEVEL[level ?? ""];
+  if (!l) return null;
+  return (
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ${l.cls}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${l.dot}`} aria-hidden />
+      {l.label}
+    </span>
+  );
+}
 
 export const SEVERITY: Record<string, { label: string; cls: string; bar: string }> = {
   high: { label: "높음", cls: "bg-redline-tint text-redline", bar: "bg-redline" },
@@ -38,6 +80,21 @@ export function VerdictPill({ verdict, size = "sm" }: { verdict?: string | null;
 export function SeverityPill({ severity }: { severity: string }) {
   const s = SEVERITY[severity] ?? SEVERITY.none;
   return <Pill cls={s.cls}>{severity === "none" ? "일치" : `리스크 ${s.label}`}</Pill>;
+}
+
+/** 큰 행동 버튼(링크) */
+export function CtaLink({ href, children, tone = "ink" }: { href: string; children: React.ReactNode; tone?: "ink" | "red" | "amber" | "ghost" }) {
+  const cls = {
+    ink: "bg-ink text-white hover:bg-ink-soft",
+    red: "bg-redline text-white hover:opacity-90",
+    amber: "bg-caution text-white hover:opacity-90",
+    ghost: "border border-line bg-white text-ink hover:bg-paper",
+  }[tone];
+  return (
+    <Link href={href} className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-3.5 py-2 text-sm font-medium ${cls}`}>
+      {children}
+    </Link>
+  );
 }
 
 /** 높음·중간·낮음 조항 수를 한 줄 막대로 */

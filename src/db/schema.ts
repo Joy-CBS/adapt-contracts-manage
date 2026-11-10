@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -29,6 +30,10 @@ export const categoryOrigin = pgEnum("category_origin", [
   "new", // 신규 인입으로 생성(F3)
 ]);
 export const categoryStatus = pgEnum("category_status", ["draft", "confirmed"]);
+/** 유형 분류 확정 상태: AI 제안(미승인) → 담당자 승인 또는 다른 유형으로 변경 */
+export const classifyState = pgEnum("classify_state", ["suggested", "approved", "changed"]);
+/** 변호사 확인 항목의 진행 상태 */
+export const lawyerStatus = pgEnum("lawyer_status", ["open", "requested", "answered"]);
 export const templateSource = pgEnum("template_source", [
   "adapt_original", // 어댑트가 제공한 원본
   "representative", // 카테고리 대표 계약서에서 만든 임시 표준안
@@ -47,7 +52,29 @@ export const categories = pgTable("categories", {
   standardizableReason: text("standardizable_reason"),
   origin: categoryOrigin("origin").notNull(),
   status: categoryStatus("status").notNull().default("draft"),
+  /** 어댑트 플레이북 ID(표준 없는 유형은 null) */
+  standardId: text("standard_id"),
+  hasStandard: boolean("has_standard").notNull().default(false),
+  includeSignals: jsonb("include_signals"),
+  excludeSignals: jsonb("exclude_signals"),
+  /** 어댑트 추정 계약 수 */
+  estimate: integer("estimate"),
+  sortOrder: integer("sort_order").notNull().default(100),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** 어댑트 분류체계(taxonomy.json) 49종. 검토 범위(categories)는 상위 5종 + 기타로 묶는다 */
+export const subtypes = pgTable("subtypes", {
+  id: text("id").primaryKey(), // category_id
+  nameKo: text("name_ko").notNull(),
+  group: text("group"),
+  standardId: text("standard_id"),
+  status: text("status"),
+  definition: text("definition"),
+  includeSignals: jsonb("include_signals"),
+  excludeSignals: jsonb("exclude_signals"),
+  /** 이 세부 유형이 속한 검토 범위(categories.class_key) */
+  bucket: text("bucket").notNull(),
 });
 
 export const standardTemplates = pgTable("standard_templates", {
@@ -79,6 +106,16 @@ export const contracts = pgTable("contracts", {
   language: text("language"),
   categoryId: uuid("category_id").references(() => categories.id),
   classifyConfidence: doublePrecision("classify_confidence"),
+  /** 분류 근거(Studio Classify 결과 + Rationale 신호·발췌 + 근거 수준) */
+  classification: jsonb("classification"),
+  classifyState: classifyState("classify_state").notNull().default("suggested"),
+  classifyDecidedAt: timestamp("classify_decided_at", { withTimezone: true }),
+  classifyNote: text("classify_note"),
+  /** 어댑트 분류체계 세부 유형(subtypes.id) */
+  subtypeId: text("subtype_id"),
+  /** 담당자가 유형을 바꿔 다시 검토해야 하는 상태 */
+  needsReReview: boolean("needs_re_review").notNull().default(false),
+  reReviewJobId: text("re_review_job_id"),
   /** F1 추출 메타데이터(당사자·브랜드·금액·기간·조항 요약) */
   metadata: jsonb("metadata"),
   slackChannel: text("slack_channel"),
@@ -104,8 +141,38 @@ export const reviews = pgTable("reviews", {
   /** Validate check 상세 */
   checks: jsonb("checks"),
   studioJobId: text("studio_job_id"),
+  /** v2: 확정 기준 위반(수정 필요)·변호사 확인·참고 항목 수 */
+  riskCount: integer("risk_count").notNull().default(0),
+  lawyerCount: integer("lawyer_count").notNull().default(0),
+  noteCount: integer("note_count").notNull().default(0),
+  /** 검토에 쓴 범위(class_key)와 모델 */
+  bucket: text("bucket"),
+  model: text("model"),
+  schemaVersion: integer("schema_version").notNull().default(1),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** 검토 항목별 담당자 조치: 변호사 확인 요청·답변 기록 */
+export const reviewItemStates = pgTable(
+  "review_item_states",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    reviewId: uuid("review_id")
+      .notNull()
+      .references(() => reviews.id, { onDelete: "cascade" }),
+    itemIndex: integer("item_index").notNull(),
+    status: lawyerStatus("status").notNull().default("open"),
+    /** 요청 메모(담당자) */
+    requestNote: text("request_note"),
+    /** 변호사 답변: 수용 / 수정 요구 / 기타 */
+    resolution: text("resolution"),
+    answerNote: text("answer_note"),
+    requestedAt: timestamp("requested_at", { withTimezone: true }),
+    answeredAt: timestamp("answered_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique("review_item_states_review_item").on(t.reviewId, t.itemIndex)],
+);
 
 /** Studio 리소스 ID 저장소(Agent·Config·Collection 등). key 예: agent.review */
 export const studioResources = pgTable("studio_resources", {

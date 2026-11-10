@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { AccountLink, Nav } from "@/components/nav";
-import "@fontsource/ibm-plex-sans-kr/400.css";
-import "@fontsource/ibm-plex-sans-kr/500.css";
-import "@fontsource/ibm-plex-sans-kr/600.css";
-import "@fontsource/noto-serif-kr/400.css";
+// Pretendard(가변 글꼴, 한글 동적 서브셋): 필요한 글자 조각만 내려받는다
+import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import "./globals.css";
 
 export const metadata: Metadata = {

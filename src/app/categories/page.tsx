@@ -7,82 +7,57 @@ export const dynamic = "force-dynamic";
 export default async function CategoriesPage() {
   const cats = await listCategories();
   const total = cats.reduce((a, c) => a + c.count, 0);
-  const major = cats.filter((c) => c.count > 3);
-  const minor = cats.filter((c) => c.count <= 3);
-
-  const Row = ({ c }: { c: (typeof cats)[number] }) => (
-    <li>
-      <Link href={`/categories/${c.classKey}`} className="grid gap-3 px-4 py-4 hover:bg-paper md:grid-cols-[1fr_11rem_10rem_8rem] md:items-center">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium">{c.name}</span>
-            {!c.standardizable && <Pill cls="bg-caution-tint text-caution">정형화 어려움</Pill>}
-            {c.origin === "new" && <Pill cls="bg-insert-tint text-insert">신규 유형</Pill>}
-          </div>
-          <p className="mt-1 line-clamp-2 max-w-[70ch] text-sm text-slate">{c.definition}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Meter value={c.count} max={cats[0]?.count ?? 1} />
-          <span className="w-20 shrink-0 text-right text-sm tabular-nums">
-            {c.count}건 <span className="text-slate">{pct(c.count, total)}%</span>
-          </span>
-        </div>
-        <div className="text-sm text-slate">
-          고위험 조항 평균 <b className="font-medium text-redline">{c.avgHigh.toFixed(1)}</b>개
-        </div>
-        <div className="text-sm md:text-right">
-          {c.templateStatus === "confirmed" ? (
-            <span className="text-comply">표준안 확정</span>
-          ) : c.templateStatus ? (
-            <span className="text-slate">초안 {c.clauseCount}개 조항</span>
-          ) : (
-            <span className="text-slate">표준안 없음</span>
-          )}
-        </div>
-      </Link>
-    </li>
-  );
+  const max = Math.max(...cats.map((c) => c.count), 1);
 
   return (
     <div className="space-y-10">
       <div className="max-w-3xl">
-        <h1 className="text-3xl font-semibold tracking-tight">표준계약서</h1>
-        <p className="mt-3 text-ink-soft">
-          기존 계약서를 같은 양식으로 관리할 수 있는 단위로 묶은 {cats.length}개 유형입니다. 각 유형의 표준안은 계약서들의 공통 조항과 편차로 만든
-          초안이며, 법무팀이 확정하거나 어댑트 표준계약서로 교체합니다.
+        <h1 className="text-3xl font-semibold tracking-tight">표준계약서와 검토 범위</h1>
+        <p className="mt-3 leading-relaxed text-ink-soft">
+          어댑트 전달자료(분류체계 49종·플레이북 25종) 기준입니다. 계약 수가 많은 상위 5개 유형은 해당 플레이북으로 조항별로 검토하고, 나머지는 모두
+          기타로 묶어 전 표준 공통 기준(01_COMMON_POSITIONS)까지 검토합니다.
         </p>
       </div>
 
       {cats.length === 0 ? (
         <Empty>아직 유형이 없습니다. 데이터 적재 화면에서 분석 결과를 올려 주세요.</Empty>
       ) : (
-        <>
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold tracking-tight">주요 유형 ({major.length}종)</h2>
-            <Panel>
-              <ul className="divide-y divide-line">
-                {major.map((c) => (
-                  <Row key={c.id} c={c} />
-                ))}
-              </ul>
-            </Panel>
-          </section>
-          {minor.length > 0 && (
-            <section className="space-y-3">
-              <div>
-                <h2 className="text-lg font-semibold tracking-tight">소수 유형 ({minor.length}종)</h2>
-                <p className="mt-1 text-sm text-slate">3건 이하로 쓰인 유형입니다. 표준계약서로 만들지, 건별로 검토할지 정합니다.</p>
-              </div>
-              <Panel>
-                <ul className="divide-y divide-line">
-                  {minor.map((c) => (
-                    <Row key={c.id} c={c} />
-                  ))}
-                </ul>
-              </Panel>
-            </section>
-          )}
-        </>
+        <Panel>
+          <ul className="divide-y divide-line">
+            {cats.map((c, i) => (
+              <li key={c.id}>
+                <Link href={`/categories/${c.classKey}`} className="grid gap-3 px-4 py-4 hover:bg-paper md:grid-cols-[2rem_1fr_12rem_11rem] md:items-center">
+                  <span className="hidden text-sm tabular-nums text-slate md:block">{c.classKey === "others" ? "–" : i + 1}</span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{c.name}</span>
+                      {c.hasStandard ? (
+                        <Pill cls="bg-comply-tint text-comply">어댑트 표준 {c.standardId}</Pill>
+                      ) : c.classKey === "others" ? (
+                        <Pill>공통 기준 검토</Pill>
+                      ) : (
+                        <Pill cls="bg-caution-tint text-caution">표준 없음 · 제정 필요</Pill>
+                      )}
+                    </div>
+                    <p className="mt-1 line-clamp-2 max-w-[72ch] text-sm text-slate">{c.definition}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Meter value={c.count} max={max} />
+                    <span className="w-24 shrink-0 text-right text-sm tabular-nums">
+                      {c.count}건 <span className="text-slate">{pct(c.count, total)}%</span>
+                    </span>
+                  </div>
+                  <div className="text-sm text-slate md:text-right">
+                    {c.estimate ? `어댑트 추정 전체 ${c.estimate.toLocaleString()}건` : "상위 5종 외 전부"}
+                    <div className="text-xs">
+                      수정 필요 <b className="font-medium text-redline">{c.red}</b> · 변호사 확인 <b className="font-medium text-caution">{c.yellow}</b>
+                    </div>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Panel>
       )}
     </div>
   );
