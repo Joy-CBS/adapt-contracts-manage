@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Nav } from "@/components/nav";
+import { AccountLink, Nav } from "@/components/nav";
 import "@fontsource/ibm-plex-sans-kr/400.css";
 import "@fontsource/ibm-plex-sans-kr/500.css";
 import "@fontsource/ibm-plex-sans-kr/600.css";
@@ -22,6 +22,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             </span>
             <Nav />
             <span className="ml-auto hidden text-xs text-slate sm:inline">Upstage Studio 기반</span>
+            <AccountLink authEnabled={Boolean(process.env.DEMO_PASSWORD)} />
           </div>
         </header>
         <main className="mx-auto max-w-6xl px-4 py-8 md:py-10">{children}</main>

@@ -16,7 +16,7 @@ Upstage Studio(Document Agent API v2)를 최대한 활용해 어댑트(파이노
 | 문서 AI | Upstage Studio API `https://api.upstage.ai/v2` | 키는 서버에서만 사용 |
 | DB | Postgres + Drizzle ORM | 배포: Neon(`DATABASE_URL`), 로컬: 내장 PGlite(`data/pglite`) |
 | Word 변경기록 | 자체 OOXML 생성(`src/lib/redline.ts`) | 다운로드 시 즉석 생성, 별도 저장소 불필요 |
-| 접근 제어 | `DEMO_PASSWORD` Basic Auth | 외부 공유 데모 보호 |
+| 접근 제어 | 로그인 화면 + 서명 쿠키(`DEMO_USER`/`DEMO_PASSWORD`) | 외부 공유 데모 보호, 30일 유지 |
 
 ## Studio 리소스
 
@@ -81,4 +81,4 @@ npm run dev                     # http://localhost:3000
 
 - 원본 계약서와 분석 결과(`data/`)는 저장소에 커밋하지 않습니다(`.gitignore`).
 - 추출 스키마에 주민번호·연락처 필드를 두지 않고, 리스크 검토 발췌에서도 `[개인정보]`로 가리도록 지시합니다.
-- 외부 공유 배포에는 반드시 `DEMO_PASSWORD`를 설정합니다.
+- 외부 공유 배포에는 반드시 `DEMO_PASSWORD`를 설정합니다. 비밀번호는 환경 변수로만 두고 코드·저장소에 넣지 않습니다.

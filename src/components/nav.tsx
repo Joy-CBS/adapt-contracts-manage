@@ -11,6 +11,7 @@ const items = [
 
 export function Nav() {
   const path = usePathname();
+  if (path === "/login") return null;
   return (
     <nav className="flex h-full gap-1 text-sm">
       {items.map((it) => {
@@ -29,5 +30,16 @@ export function Nav() {
         );
       })}
     </nav>
+  );
+}
+
+/** 헤더 오른쪽: 접속 보호가 켜져 있을 때만 로그아웃 표시 */
+export function AccountLink({ authEnabled }: { authEnabled: boolean }) {
+  const path = usePathname();
+  if (!authEnabled || path === "/login") return null;
+  return (
+    <a href="/api/auth/logout" className="whitespace-nowrap text-xs text-slate hover:text-ink">
+      로그아웃
+    </a>
   );
 }
