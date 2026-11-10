@@ -8,10 +8,20 @@
 export const SESSION_COOKIE = "acr_session";
 export const SESSION_DAYS = 30;
 
+/**
+ * 설정값 입력 실수 보정: 앞뒤 공백·줄바꿈, 값 전체를 감싼 따옴표("..." 또는 '...')를 걷어낸다.
+ * (Vercel 화면에 .env 형식 그대로 따옴표째 붙여 넣는 경우가 흔하다)
+ */
+export function cleanSecret(v: string) {
+  let s = v.trim();
+  if (s.length >= 2 && ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'")))) s = s.slice(1, -1).trim();
+  return s;
+}
+
 export function authConfig() {
-  const password = process.env.DEMO_PASSWORD;
+  const password = cleanSecret(process.env.DEMO_PASSWORD ?? "");
   if (!password) return null;
-  return { user: process.env.DEMO_USER || "cb", password };
+  return { user: cleanSecret(process.env.DEMO_USER || "cb"), password };
 }
 
 const enc = new TextEncoder();
@@ -25,13 +35,17 @@ export function safeEqual(a: string, b: string) {
   return diff === 0;
 }
 
-export function checkCredentials(user: string, password: string) {
+/**
+ * 아이디는 대소문자를 구분하지 않고, 둘 다 앞뒤 공백은 무시한다.
+ * 데모용 단일 계정이라 어느 쪽이 틀렸는지 알려 줘 설정 오류를 빨리 찾게 한다.
+ */
+export function checkCredentials(user: string, password: string): { ok: boolean; wrong?: "user" | "password" } {
   const cfg = authConfig();
-  if (!cfg) return true;
-  // 두 비교를 모두 수행(단락 평가로 아이디 일치 여부가 드러나지 않게)
-  const okUser = safeEqual(user.trim(), cfg.user);
-  const okPass = safeEqual(password, cfg.password);
-  return okUser && okPass;
+  if (!cfg) return { ok: true };
+  const okUser = safeEqual(user.trim().toLowerCase(), cfg.user.toLowerCase());
+  const okPass = safeEqual(password.trim(), cfg.password);
+  if (okUser && okPass) return { ok: true };
+  return { ok: false, wrong: okUser ? "password" : "user" };
 }
 
 async function sign(message: string) {
@@ -65,7 +79,7 @@ export function checkBasicHeader(header: string | null) {
     const decoded = atob(header.slice(6).trim());
     const i = decoded.indexOf(":");
     if (i < 0) return false;
-    return checkCredentials(decoded.slice(0, i), decoded.slice(i + 1));
+    return checkCredentials(decoded.slice(0, i), decoded.slice(i + 1)).ok;
   } catch {
     return false;
   }

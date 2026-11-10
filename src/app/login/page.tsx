@@ -16,6 +16,13 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <h1 className="text-2xl font-semibold tracking-tight">로그인</h1>
       <p className="mt-2 text-sm text-ink-soft">전달받은 아이디와 비밀번호를 입력하세요. 이 브라우저에서는 30일 동안 다시 묻지 않습니다.</p>
       <LoginForm next={target} />
+      {builtAt && <p className="mt-6 text-center text-xs text-slate/80">이 화면은 {builtAt}에 배포된 버전입니다.</p>}
     </div>
   );
 }
+
+const builtAt = process.env.BUILD_TIME
+  ? new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" }).format(
+      new Date(process.env.BUILD_TIME),
+    )
+  : null;

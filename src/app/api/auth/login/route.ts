@@ -9,9 +9,11 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {}
-  if (!checkCredentials(String(body.user ?? ""), String(body.password ?? ""))) {
+  const check = checkCredentials(String(body.user ?? ""), String(body.password ?? ""));
+  if (!check.ok) {
     await new Promise((r) => setTimeout(r, 600)); // 연속 대입 속도를 늦춘다
-    return Response.json({ ok: false, error: "아이디 또는 비밀번호가 맞지 않습니다." }, { status: 401 });
+    const error = check.wrong === "user" ? "아이디가 맞지 않습니다." : "비밀번호가 맞지 않습니다.";
+    return Response.json({ ok: false, error }, { status: 401 });
   }
   const res = Response.json({ ok: true });
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";

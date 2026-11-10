@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@electric-sql/pglite"],
   // 관리 화면 적재 API가 배포 환경에서 마이그레이션 SQL을 읽을 수 있게 포함
   outputFileTracingIncludes: { "/api/admin/seed": ["./drizzle/**/*"] },
+  // 배포(빌드) 시각: 설정을 바꾼 뒤 다시 배포됐는지 로그인 화면에서 확인하는 용도
+  env: { BUILD_TIME: new Date().toISOString() },
 };
 
 export default nextConfig;
