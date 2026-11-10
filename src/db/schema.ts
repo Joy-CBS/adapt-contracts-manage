@@ -59,6 +59,10 @@ export const categories = pgTable("categories", {
   excludeSignals: jsonb("exclude_signals"),
   /** 어댑트 추정 계약 수 */
   estimate: integer("estimate"),
+  /** 어댑트 분류체계 그룹(인플루언서·광고 콘텐츠·유통 등) */
+  group: text("group"),
+  /** taxonomy status: standard_exists | standard_needed | out_of_scope | new(담당자가 등록한 신규 유형) */
+  taxonomyStatus: text("taxonomy_status"),
   sortOrder: integer("sort_order").notNull().default(100),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -116,6 +120,16 @@ export const contracts = pgTable("contracts", {
   /** 담당자가 유형을 바꿔 다시 검토해야 하는 상태 */
   needsReReview: boolean("needs_re_review").notNull().default(false),
   reReviewJobId: text("re_review_job_id"),
+  /**
+   * 검토 요청 진행 단계(source가 upload·slack인 요청만):
+   * analyzing(AI 분석) → type_check(유형 확인) → reviewing(리스크 검토) → reviewed(결과 확인·변호사 확인) → done(완료) | failed
+   */
+  stage: text("stage"),
+  extractJobId: text("extract_job_id"),
+  reviewJobId: text("review_job_id"),
+  requestNote: text("request_note"),
+  requestedAt: timestamp("requested_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
   /** F1 추출 메타데이터(당사자·브랜드·금액·기간·조항 요약) */
   metadata: jsonb("metadata"),
   slackChannel: text("slack_channel"),

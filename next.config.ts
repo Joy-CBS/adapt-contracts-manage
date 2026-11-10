@@ -7,6 +7,17 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: { "/api/admin/seed": ["./drizzle/**/*"] },
   // 배포(빌드) 시각: 설정을 바꾼 뒤 다시 배포됐는지 로그인 화면에서 확인하는 용도
   env: { BUILD_TIME: new Date().toISOString() },
+  // 이전 화면 주소(북마크) → 새 메뉴
+  async redirects() {
+    return [
+      { source: "/contracts", destination: "/archive", permanent: false },
+      { source: "/contracts/:id", destination: "/archive/:id", permanent: false },
+      { source: "/categories", destination: "/standards", permanent: false },
+      { source: "/categories/:key", destination: "/standards/:key", permanent: false },
+      { source: "/classify", destination: "/", permanent: false },
+      { source: "/lawyer", destination: "/", permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -1,7 +1,7 @@
 /**
- * v2(어댑트 플레이북 기준) 분류·검토 결과 타입과 판단 규칙. 화면·스크립트 공용(파일 시스템 비의존).
+ * 어댑트 플레이북 기준 분류·검토 결과 타입과 판단 규칙. 화면·스크립트 공용(파일 시스템 비의존).
  */
-import { OTHERS_KEY, bucketOf } from "@/lib/buckets";
+import { bucketOf } from "@/lib/buckets";
 
 export type Signal = { signal: string; evidence: string };
 
@@ -34,22 +34,37 @@ export function suggestedBucket(label: string | undefined, r: Rationale | null |
   return bucketOf(r.primary_category_id);
 }
 
+/**
+ * 리스크 검토 기준(Studio 검토 Config) 선택: 어댑트 표준이 있는 유형은 그 플레이북, 대만 인플루언서는 참고 기준,
+ * 그 밖(표준 없는 유형·기타)은 공통 기준.
+ */
+export function reviewTargetOf(typeId: string, tax: Array<{ category_id: string; status: string; standard_id: string | null }>) {
+  const c = tax.find((x) => x.category_id === typeId);
+  if (c?.status === "standard_exists" && c.standard_id) return typeId;
+  if (typeId === "tw_inf") return "tw_inf";
+  return "common";
+}
+
+/** 화면(카테고리 표)에서 같은 판단 */
+export function reviewTargetFor(classKey: string, hasStandard: boolean) {
+  if (hasStandard) return classKey;
+  return classKey === "tw_inf" ? "tw_inf" : "common";
+}
+
 /** DB contracts.classification */
 export type Classification = {
   model: string;
-  /** 화면에 제안하는 유형(검토 범위 키) */
+  /** 화면에 제안하는 유형(어댑트 분류체계 category_id) */
   suggested: string;
-  /** Studio Classify 결과(검토 범위 키) */
+  /** Studio Classify 결과 */
   label: string;
-  /** Rationale이 고른 어댑트 세부 유형(taxonomy category_id) */
-  subtypeId: string | null;
-  rationaleBucket: string;
   agree: boolean;
   level: EvidenceLevel;
   /** 근거 수준을 그렇게 매긴 이유(화면 i 버튼) */
   reasons: Array<{ ok: boolean; text: string }>;
   rationale: Rationale | null;
-  /** Studio 신뢰도(solar-pro4는 제공하지 않아 null) */
+  /** 후보: 1순위 + 2순위(다른 유형 선택 시 먼저 보여줄 것) */
+  candidates: string[];
   confidence: number | null;
 };
 
@@ -69,92 +84,72 @@ export function cleanEvidence(s: string) {
 const FIT_SCORE = { 강함: 3, 보통: 2, 약함: 1, "해당 없음": 0 } as const;
 
 /**
- * 신뢰도 대체 지표: 두 가지 독립 판단의 일치 + 근거 신호의 양과 반대 신호로 "근거 수준"을 정한다.
- *  - 근거 충분: Classify와 Rationale이 같은 범위 + 1순위 적합도 강함 + 포함 신호 2개 이상 + 다른 범위를 가리키는 제외 신호·강한 2순위 없음
- *  - 확인 필요: 두 판단이 다름, 포함 신호 0개, 1순위 적합도 약함, 다른 범위를 가리키는 제외 신호, 2순위가 강함, 계약 본문 아님
- *  - 근거 보통: 그 밖
+ * 신뢰도 대체 지표(solar-pro4는 신뢰도 점수가 없음): Studio Classify와 근거 분석(Rationale)이 같은 유형인지 +
+ * 근거 신호의 양과 반대 신호로 근거 수준을 정한다. 둘이 다르면 근거 분석 쪽을 제안한다
+ * (SP4 실측: 엇갈린 건 대부분 근거 분석이 맞았음).
  */
 export function assessClassification(input: {
   model: string;
-  label: string;
-  rationale: Rationale | null;
+  label: string | null | undefined;
+  rationale: Rationale | null | undefined;
   confidence?: number | null;
   nameOf: (id: string) => string;
 }): Classification {
-  const { label, rationale: r } = input;
-  const reasons: Classification["reasons"] = [];
+  const label = input.label ?? "other";
+  const r = input.rationale;
   if (!r) {
     return {
       model: input.model,
-      suggested: bucketOf(label),
+      suggested: label,
       label,
-      subtypeId: null,
-      rationaleBucket: label,
       agree: false,
       level: "weak",
       reasons: [{ ok: false, text: "근거 분석 결과가 없어 담당자 확인이 필요합니다." }],
       rationale: null,
+      candidates: [label],
       confidence: input.confidence ?? null,
     };
   }
-  const clean = {
+  const clean: Rationale = {
     ...r,
     matched_include_signals: (r.matched_include_signals ?? []).map((s) => ({ ...s, evidence: cleanEvidence(s.evidence ?? "") })),
     matched_exclude_signals: (r.matched_exclude_signals ?? []).map((s) => ({ ...s, evidence: cleanEvidence(s.evidence ?? "") })),
   };
-  const rb = bucketOf(r.primary_category_id);
-  const agree = rb === label;
+  const suggested = r.document_kind === "non_contract" ? "non_contract" : r.primary_category_id || label;
+  const agree = label === suggested;
   const inc = clean.matched_include_signals.length;
-  const ru = r.runner_up_category_id && r.runner_up_category_id !== "none" ? r.runner_up_category_id : null;
-  const ruOtherBucket = ru ? bucketOf(ru) !== label : false;
-  const ruScore = ru ? FIT_SCORE[r.runner_up_fit] ?? 0 : 0;
-  // 제외 신호는 모델이 "해당 없음"까지 나열하는 경우가 있어(solar-pro4), 2순위 후보(적합도 보통 이상)로도 뒷받침될 때만 반대 신호로 센다
-  const otherExcl = clean.matched_exclude_signals.filter(
-    (s) => bucketOf(s.points_to) !== label && ruOtherBucket && ruScore >= 2 && bucketOf(s.points_to) === bucketOf(ru),
-  );
+  const ru = r.runner_up_category_id && r.runner_up_category_id !== "none" && r.runner_up_category_id !== suggested ? r.runner_up_category_id : null;
+  const ruScore = ru ? (FIT_SCORE[r.runner_up_fit] ?? 0) : 0;
+  // 제외 신호는 모델이 "해당 없음"까지 나열하기도 해서, 2순위 후보(적합도 보통 이상)로도 뒷받침될 때만 반대 신호로 센다
+  const otherExcl = clean.matched_exclude_signals.filter((s) => s.points_to !== suggested && ru && ruScore >= 2 && s.points_to === ru);
 
+  const reasons: Classification["reasons"] = [];
   reasons.push(
     agree
-      ? { ok: true, text: `Studio 분류(Classify)와 근거 분석(Rationale)이 같은 유형을 가리킵니다.` }
-      : {
-          ok: false,
-          text: `두 판단이 다릅니다: Studio 분류 ${input.nameOf(label)} / 근거 분석 ${input.nameOf(r.primary_category_id)}. 분류 기준을 모두 대조한 근거 분석 쪽을 제안합니다.`,
-        },
+      ? { ok: true, text: "Studio 분류와 근거 분석이 같은 유형을 가리킵니다." }
+      : { ok: false, text: `두 판단이 다릅니다: Studio 분류 ${input.nameOf(label)} / 근거 분석 ${input.nameOf(suggested)}. 분류 기준을 모두 대조한 근거 분석 쪽을 제안합니다.` },
   );
-  if (rb === OTHERS_KEY || label === OTHERS_KEY) {
-    reasons.push({ ok: true, text: `세부 유형 추정: ${input.nameOf(r.primary_category_id)}` });
-  }
   reasons.push(
     inc >= 2
-      ? { ok: true, text: `분류 기준의 포함 신호 ${inc}개를 계약서에서 확인했습니다.` }
-      : { ok: false, text: inc === 0 ? "분류 기준의 포함 신호를 계약서에서 찾지 못했습니다." : "포함 신호가 1개뿐입니다." },
+      ? { ok: true, text: `이 유형의 분류 신호 ${inc}개를 계약서에서 확인했습니다.` }
+      : { ok: false, text: inc === 0 ? "이 유형의 분류 신호를 계약서에서 찾지 못했습니다." : "확인한 분류 신호가 1개뿐입니다." },
   );
-  reasons.push(
-    r.primary_fit === "강함"
-      ? { ok: true, text: "정의와의 적합도: 강함" }
-      : { ok: r.primary_fit === "보통", text: `정의와의 적합도: ${r.primary_fit}` },
-  );
-  if (otherExcl.length) reasons.push({ ok: false, text: `다른 유형을 가리키는 제외 신호 ${otherExcl.length}개: ${otherExcl.map((s) => input.nameOf(s.points_to)).join(", ")}` });
-  if (ru && ruOtherBucket && ruScore >= 2) reasons.push({ ok: false, text: `2순위 후보 ${input.nameOf(ru)}(적합도 ${r.runner_up_fit})도 가능성이 있습니다.` });
+  reasons.push({ ok: r.primary_fit !== "약함", text: `유형 정의와 맞는 정도: ${r.primary_fit}` });
+  if (otherExcl.length) reasons.push({ ok: false, text: `다른 유형을 가리키는 신호가 있습니다: ${input.nameOf(otherExcl[0].points_to)}` });
+  if (ru && ruScore >= 2) reasons.push({ ok: false, text: `2순위 후보 ${input.nameOf(ru)}(맞는 정도 ${r.runner_up_fit})도 가능성이 있습니다.` });
   if (r.document_kind === "non_contract") reasons.push({ ok: false, text: "계약 본문이 아닌 문서로 보입니다(감사추적인증서 등)." });
 
-  let level: EvidenceLevel = "medium";
-  const weak =
-    !agree || inc === 0 || r.primary_fit === "약함" || otherExcl.length > 0 || (ruOtherBucket && ruScore >= 3) || r.document_kind === "non_contract";
-  const strong = agree && r.primary_fit === "강함" && inc >= 2 && otherExcl.length === 0 && !(ruOtherBucket && ruScore >= 2);
-  if (weak) level = "weak";
-  else if (strong) level = "strong";
-
+  const weak = !agree || inc === 0 || r.primary_fit === "약함" || otherExcl.length > 0 || ruScore >= 3 || r.document_kind === "non_contract";
+  const strong = agree && r.primary_fit === "강함" && inc >= 2 && otherExcl.length === 0 && ruScore < 2;
   return {
     model: input.model,
-    suggested: suggestedBucket(label, r),
+    suggested,
     label,
-    subtypeId: r.primary_category_id ?? null,
-    rationaleBucket: rb,
     agree,
-    level,
+    level: weak ? "weak" : strong ? "strong" : "medium",
     reasons,
     rationale: clean,
+    candidates: [suggested, ...(ru ? [ru] : []), ...(!agree && label !== ru ? [label] : [])],
     confidence: input.confidence ?? null,
   };
 }

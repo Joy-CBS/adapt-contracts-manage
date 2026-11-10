@@ -19,43 +19,34 @@ Upstage Studio(Document Agent API v2)를 최대한 활용해 어댑트(파이노
 | 글꼴 | Pretendard(가변, 동적 서브셋) | `pretendard` 패키지 |
 | 접근 제어 | 로그인 화면 + 서명 쿠키(`DEMO_USER`/`DEMO_PASSWORD`) | 외부 공유 데모 보호, 30일 유지 |
 
-## Studio 리소스 (v2, 추론 모델 solar-pro4)
+## Studio 리소스 (v3)
 
-| Agent | Workflow | 용도 |
+| Agent | Workflow | 모델 |
 |---|---|---|
-| 어댑트 계약서 적재 (F1) | Parse → Extract(26개 필드, solar-pro4) → Export(Collection) | 계약서 적재 |
-| 어댑트 계약서 유형 판단 v2 | Parse → Classify(상위 5종 + 기타) → Rationale(Instruct, 49종 근거) | 유형 판단 + 분류 근거 |
-| 어댑트 계약서 리스크 검토 v2 | Parse → Instruct(유형별 플레이북 고정) → Validate | 항목별 사실 → 수정 필요/변호사 확인/참고 |
+| 정보 추출 | Parse → Extract(26개 필드) | solar-pro4 |
+| 유형 판단 | Parse → Classify(어댑트 분류체계 49종) → Rationale(Instruct: 1·2순위, 근거 신호·발췌) | solar-pro4 |
+| 리스크 검토 | Parse → Instruct(유형별 플레이북 고정) → Validate. 표준 25종 + 대만(참고) + 공통 기준, Config 27개 | GPT(Studio 기본) |
 
-같은 Workflow를 GPT(Studio 기본 모델)로도 만들어 성능을 비교했다(`scripts/v2-compare.ts`).
+리스크 검토만 GPT로 둔 이유: solar-pro4는 결론이 소극적이고 3.5배 느렸다(비교 결과는 Notion 문서).
 
-## 실행 순서 (v2)
+## 실행 순서 (v3)
 
 ```bash
-npm install
-cp .env.example .env                      # UPSTAGE_API_KEY 등
-# 어댑트 전달자료를 data/adapt/{spec,kb,standards}에 둔다(저장소에 넣지 않음)
-npx tsx scripts/v2-classify.ts setup      # 유형 판단 Agent·Config(sp4, gpt)
-npx tsx scripts/v2-classify.ts submit sp4 && npx tsx scripts/v2-classify.ts collect sp4
-npx tsx scripts/v2-extract.ts setup && npx tsx scripts/v2-extract.ts submit && npx tsx scripts/v2-extract.ts collect
-npx tsx scripts/v2-review.ts setup        # 리스크 검토 Agent·유형별 Config
-npx tsx scripts/v2-review.ts submit sp4 && npx tsx scripts/v2-review.ts collect sp4
-npx tsx scripts/v2-compare.ts             # GPT vs SP4 비교 지표(data/v2/analysis)
-npm run db:seed                           # DB 적재 + data/seed-bundle.json.gz 생성
-npm run dev
+npx tsx scripts/v3-classify.ts setup && npx tsx scripts/v3-classify.ts submit && npx tsx scripts/v3-classify.ts collect
+npx tsx scripts/v3-review.ts setup && npx tsx scripts/v3-review.ts submit && npx tsx scripts/v3-review.ts collect
+npx tsx scripts/v3-requests.ts submit <dir>   # 검토 요청 샘플(기존에 없는 계약서)
+npm run db:seed                                # DB 적재 + data/seed-bundle.json.gz
 ```
 
 ## 화면
 
 | 경로 | 내용 |
 |---|---|
-| `/` | 검토 담당자 할 일: 분류 확인 → 변호사 확인 요청 → 수정본 보내기 → 답변 기록 순서와 바로가기 |
-| `/classify` | AI 분류 확인: 근거 수준별 목록, i 버튼(분류 근거), 승인·다른 유형으로·기타로, 근거 충분 일괄 승인 |
-| `/lawyer` | 변호사 확인 항목: 요청 전·답변 대기·답변 완료, 질문 목록 복사, 답변 기록 |
-| `/contracts` | 계약서 목록: 판정·유형·분류 상태 필터 |
-| `/contracts/[id]` | 항목별 판단 이유·근거·변호사 질문, 분류 확인, 표준양식 변경기록(.docx) |
-| `/categories` | 검토 범위(상위 5종 + 기타)와 어댑트 표준 |
-| `/categories/[key]` | 분류 기준, 표준 원문, 조항별 결과 분포, 기타의 세부 유형 |
+| `/` 검토 요청 | 내가 처리할 차례 / 기다리는 중 / 완료. 카드마다 지금 할 일과 버튼 하나 |
+| `/requests/new` | 계약서 올리기(배포 서버가 Studio Job 시작) |
+| `/requests/[id]` | 단계(접수 → 유형 확인 → 리스크 검토 → 변호사 확인 → 완료)와 "지금 할 일" 패널, 항목별 검토 결과 |
+| `/archive` 계약서 보관함 | 기존 계약서를 유형별로 조회, 분류 근거가 약한 건만 확인 요청 |
+| `/standards` 표준계약서 | 표준 25종·표준 없는 유형, 플레이북 조항별 기존 계약 현황, 원본 docx |
 
 ## 작업 단위
 

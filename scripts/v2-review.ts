@@ -115,7 +115,7 @@ export function verdictChecks() {
   ];
 }
 
-const RULES = `답하는 방법 (반드시 지킬 것)
+export const RULES = `답하는 방법 (반드시 지킬 것)
 1. 아래 "검토 항목"(C1, C2 …)마다 하나씩, 번호 순서대로 모두 답합니다. item_id와 grade는 항목에 적힌 그대로 씁니다.
 2. 당신은 사실만 답합니다: 계약서가 기준과 같은지(finding), 확정 기준 위반인지, 알림 규칙에 해당하는지, 허용 범위 안인지, 확신이 없는지. "수용할지"는 판단하지 않습니다. 최종 결론은 변호사가 내립니다.
 3. finding 판단법:
@@ -140,7 +140,7 @@ export async function loadStandardDoc(standardId: string): Promise<StandardDoc> 
   return { standardId, title: fm.title ?? standardId, sourceFile: fm.source_file, paragraphs: stdParagraphs(documentXml) };
 }
 
-function playbookContext(id: string) {
+export function playbookContext(id: string) {
   const md = playbook(id);
   return [playbookSection(md, 1), playbookSection(md, 3), playbookSection(md, 6)].filter(Boolean).join("\n\n");
 }
