@@ -1,54 +1,86 @@
 import Link from "next/link";
 
-export const VERDICT: Record<string, { label: string; cls: string }> = {
-  red: { label: "수정 필요", cls: "bg-red-50 text-red-700 ring-red-200" },
-  yellow: { label: "확인 필요", cls: "bg-amber-50 text-amber-800 ring-amber-200" },
-  green: { label: "표준 부합", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
+export const VERDICT: Record<string, { label: string; cls: string; dot: string }> = {
+  red: { label: "수정 필요", cls: "bg-redline-tint text-redline", dot: "bg-redline" },
+  yellow: { label: "확인 필요", cls: "bg-caution-tint text-caution", dot: "bg-caution" },
+  green: { label: "표준 부합", cls: "bg-comply-tint text-comply", dot: "bg-comply" },
 };
 
-export const SEVERITY: Record<string, { label: string; cls: string }> = {
-  high: { label: "높음", cls: "bg-red-50 text-red-700 ring-red-200" },
-  medium: { label: "중간", cls: "bg-amber-50 text-amber-800 ring-amber-200" },
-  low: { label: "낮음", cls: "bg-sky-50 text-sky-700 ring-sky-200" },
-  none: { label: "없음", cls: "bg-neutral-50 text-neutral-500 ring-neutral-200" },
+export const SEVERITY: Record<string, { label: string; cls: string; bar: string }> = {
+  high: { label: "높음", cls: "bg-redline-tint text-redline", bar: "bg-redline" },
+  medium: { label: "중간", cls: "bg-caution-tint text-caution", bar: "bg-caution" },
+  low: { label: "낮음", cls: "bg-insert-tint text-insert", bar: "bg-insert/60" },
+  none: { label: "일치", cls: "bg-comply-tint text-comply", bar: "bg-comply" },
 };
 
 export const LANG: Record<string, string> = { ko: "한국어", en: "영어", zh: "중국어", ja: "일본어", mixed: "혼합", other: "기타" };
 
-export function Badge({ children, cls }: { children: React.ReactNode; cls?: string }) {
+export function Pill({ children, cls }: { children: React.ReactNode; cls?: string }) {
   return (
-    <span className={`inline-flex items-center whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${cls ?? "bg-neutral-50 text-neutral-600 ring-neutral-200"}`}>
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ${cls ?? "bg-line/60 text-ink-soft"}`}>
       {children}
     </span>
   );
 }
 
-export function VerdictBadge({ verdict }: { verdict?: string | null }) {
-  if (!verdict) return <Badge>미검토</Badge>;
-  const v = VERDICT[verdict] ?? { label: verdict, cls: undefined };
-  return <Badge cls={v.cls}>{v.label}</Badge>;
-}
-
-export function SeverityBadge({ severity }: { severity: string }) {
-  const s = SEVERITY[severity] ?? SEVERITY.none;
-  return <Badge cls={s.cls}>{s.label}</Badge>;
-}
-
-export function Stat({ label, value, hint }: { label: string; value: React.ReactNode; hint?: string }) {
+export function VerdictPill({ verdict, size = "sm" }: { verdict?: string | null; size?: "sm" | "lg" }) {
+  if (!verdict) return <Pill>미검토</Pill>;
+  const v = VERDICT[verdict];
+  if (!v) return <Pill>{verdict}</Pill>;
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-4">
-      <div className="text-sm text-neutral-500">{label}</div>
-      <div className="mt-1 text-2xl font-medium tabular-nums">{value}</div>
-      {hint && <div className="mt-1 text-xs text-neutral-400">{hint}</div>}
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full font-medium ${v.cls} ${size === "lg" ? "px-3 py-1 text-sm" : "px-2.5 py-0.5 text-xs"}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${v.dot}`} aria-hidden />
+      {v.label}
+    </span>
+  );
+}
+
+export function SeverityPill({ severity }: { severity: string }) {
+  const s = SEVERITY[severity] ?? SEVERITY.none;
+  return <Pill cls={s.cls}>{severity === "none" ? "일치" : `리스크 ${s.label}`}</Pill>;
+}
+
+/** 높음·중간·낮음 조항 수를 한 줄 막대로 */
+export function RiskBar({ high = 0, medium = 0, low = 0, scale, showNumbers = true }: { high?: number | null; medium?: number | null; low?: number | null; scale?: number; showNumbers?: boolean }) {
+  const h = high ?? 0;
+  const m = medium ?? 0;
+  const l = low ?? 0;
+  const total = Math.max(scale ?? h + m + l, 1);
+  const seg = (n: number, cls: string) => (n ? <span className={cls} style={{ width: `${(n / total) * 100}%` }} /> : null);
+  return (
+    <div className="flex items-center gap-2" aria-label={`리스크 높음 ${h}, 중간 ${m}, 낮음 ${l}`}>
+      <div className="flex h-2 w-24 overflow-hidden rounded-full bg-line/70">
+        {seg(h, "bg-redline")}
+        {seg(m, "bg-caution")}
+        {seg(l, "bg-insert/50")}
+      </div>
+      {showNumbers && (
+        <span className="text-xs tabular-nums text-slate">
+          <span className={h ? "font-medium text-redline" : ""}>{h}</span>
+          <span className="text-line"> / </span>
+          <span className={m ? "text-caution" : ""}>{m}</span>
+        </span>
+      )}
     </div>
   );
 }
 
-export function Section({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) {
+export function Meter({ value, max, cls = "bg-ink" }: { value: number; max: number; cls?: string }) {
   return (
-    <section className="space-y-3">
-      <div className="flex items-end justify-between gap-4">
-        <h2 className="text-lg font-medium">{title}</h2>
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-line/70">
+      <div className={`h-full rounded-full ${cls}`} style={{ width: `${Math.min(100, (value / Math.max(max, 1)) * 100)}%` }} />
+    </div>
+  );
+}
+
+export function Section({ title, desc, children, action }: { title: string; desc?: string; children: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+          {desc && <p className="mt-1 text-sm text-slate">{desc}</p>}
+        </div>
         {action}
       </div>
       {children}
@@ -56,22 +88,26 @@ export function Section({ title, children, action }: { title: string; children: 
   );
 }
 
+export function Panel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`rounded-lg border border-line bg-white ${className}`}>{children}</div>;
+}
+
 export function Empty({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center text-sm text-neutral-500">{children}</div>;
+  return <div className="rounded-lg border border-dashed border-line bg-white p-8 text-center text-sm text-slate">{children}</div>;
 }
 
 export function Crumbs({ items }: { items: Array<{ href?: string; label: string }> }) {
   return (
-    <nav className="mb-4 flex flex-wrap items-center gap-1 text-sm text-neutral-500">
+    <nav aria-label="위치" className="mb-5 flex flex-wrap items-center gap-1.5 text-sm text-slate">
       {items.map((it, i) => (
-        <span key={i} className="flex items-center gap-1">
-          {i > 0 && <span className="text-neutral-300">/</span>}
+        <span key={i} className="flex items-center gap-1.5">
+          {i > 0 && <span aria-hidden>›</span>}
           {it.href ? (
-            <Link href={it.href} className="hover:text-neutral-900">
+            <Link href={it.href} className="hover:text-ink">
               {it.label}
             </Link>
           ) : (
-            <span className="text-neutral-800">{it.label}</span>
+            <span className="max-w-[48ch] truncate text-ink-soft">{it.label}</span>
           )}
         </span>
       ))}
@@ -81,6 +117,12 @@ export function Crumbs({ items }: { items: Array<{ href?: string; label: string 
 
 export function formatAmount(amount?: unknown, currency?: unknown) {
   const n = Number(amount);
-  if (!n) return "-";
-  return `${n.toLocaleString("ko-KR")} ${currency ?? ""}`.trim();
+  if (!n) return "–";
+  const c = String(currency ?? "");
+  if (c === "KRW" && n >= 10000) return `${(n / 10000).toLocaleString("ko-KR", { maximumFractionDigits: 1 })}만 원`;
+  return `${n.toLocaleString("ko-KR")} ${c}`.trim();
+}
+
+export function pct(n: number, d: number) {
+  return d ? Math.round((n / d) * 100) : 0;
 }

@@ -1,9 +1,47 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --font-serif: "Noto Serif KR", "AppleMyungjo", serif;
+
+  --color-ink: #1b2536;
+  --color-ink-soft: #3a4558;
+  --color-slate: #667085;
+  --color-line: #e3e6ec;
+  --color-paper: #f6f7f9;
+  --color-redline: #c2183a;
+  --color-redline-tint: #fbeef1;
+  --color-insert: #1d5fc4;
+  --color-insert-tint: #edf3fc;
+  --color-caution: #a86a00;
+  --color-caution-tint: #fdf5e6;
+  --color-comply: #2b7a57;
+  --color-comply-tint: #eaf5ef;
 }
 
 body {
   font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1;
+  word-break: keep-all; /* 한국어는 어절 단위로 줄바꿈 */
+  overflow-wrap: anywhere;
+}
+
+/* Word 변경 추적과 같은 표기: 삭제 = 빨간 취소선, 삽입 = 파란 밑줄 */
+.redline-del {
+  color: var(--color-redline);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, var(--color-redline) 70%, transparent);
+}
+.redline-ins {
+  color: var(--color-insert);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--color-insert) 60%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-insert);
+  outline-offset: 2px;
 }

@@ -1,36 +1,30 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Nav } from "@/components/nav";
+import "@fontsource/ibm-plex-sans-kr/400.css";
+import "@fontsource/ibm-plex-sans-kr/500.css";
+import "@fontsource/ibm-plex-sans-kr/600.css";
+import "@fontsource/noto-serif-kr/400.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "어댑트 계약서 검토",
-  description: "Upstage Studio 기반 계약서 분류·리스크 검토 PoC",
+  title: "어댑트 계약 검토",
+  description: "표준계약서 유형 분류와 조항별 리스크 검토",
 };
-
-const nav = [
-  { href: "/", label: "개요" },
-  { href: "/categories", label: "카테고리 맵" },
-  { href: "/contracts", label: "계약서 목록" },
-];
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko">
-      <body className="min-h-screen bg-neutral-50 text-neutral-900 antialiased">
-        <header className="border-b border-neutral-200 bg-white">
-          <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3">
-            <span className="font-medium">어댑트 계약서 검토</span>
-            <nav className="flex gap-4 text-sm text-neutral-600">
-              {nav.map((n) => (
-                <Link key={n.href} href={n.href} className="hover:text-neutral-900">
-                  {n.label}
-                </Link>
-              ))}
-            </nav>
-            <span className="ml-auto text-xs text-neutral-400">Powered by Upstage Studio</span>
+      <body className="min-h-screen bg-paper text-ink antialiased">
+        <header className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur">
+          <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:gap-8">
+            <span className="whitespace-nowrap font-semibold tracking-tight">
+              어댑트<span className="hidden sm:inline"> 계약 검토</span>
+            </span>
+            <Nav />
+            <span className="ml-auto hidden text-xs text-slate sm:inline">Upstage Studio 기반</span>
           </div>
         </header>
-        <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+        <main className="mx-auto max-w-6xl px-4 py-8 md:py-10">{children}</main>
       </body>
     </html>
   );

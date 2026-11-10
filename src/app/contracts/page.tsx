@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Empty, LANG, VerdictBadge, formatAmount } from "@/components/ui";
-import { listCategories, listContracts } from "@/lib/queries";
+import { Empty, LANG, Panel, RiskBar, VerdictPill, formatAmount } from "@/components/ui";
+import { listCategories, listContracts, overview } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -8,88 +8,124 @@ type SP = Promise<{ q?: string; category?: string; verdict?: string; language?: 
 
 export default async function ContractsPage({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
-  const [rows, cats] = await Promise.all([listContracts(sp), listCategories()]);
-  const select = "rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-sm";
+  const [rows, cats, o] = await Promise.all([listContracts(sp), listCategories(), overview()]);
+
+  const href = (patch: Record<string, string | undefined>) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries({ ...sp, ...patch })) if (v) p.set(k, v);
+    const s = p.toString();
+    return `/contracts${s ? `?${s}` : ""}`;
+  };
+  const tabs = [
+    { key: undefined, label: "전체", n: o.contracts },
+    { key: "red", label: "수정 필요", n: o.red },
+    { key: "yellow", label: "확인 필요", n: o.yellow },
+    { key: "green", label: "표준 부합", n: o.green },
+  ];
+  const control = "h-9 rounded-md border border-line bg-white px-3 text-sm";
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-medium">계약서 목록</h1>
-        <p className="mt-2 text-neutral-600">리스크가 큰 계약서부터 표시합니다. 계약서를 누르면 조항별 검토와 Word 변경기록을 볼 수 있습니다.</p>
+      <div className="max-w-3xl">
+        <h1 className="text-3xl font-semibold tracking-tight">계약서 검토</h1>
+        <p className="mt-3 text-ink-soft">고위험 조항이 많은 계약서부터 보여줍니다. 계약서를 열면 조항별 수정 제안과 Word 변경기록을 받을 수 있습니다.</p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-line">
+        {tabs.map((t) => {
+          const active = (sp.verdict ?? undefined) === t.key;
+          return (
+            <Link
+              key={t.label}
+              href={href({ verdict: t.key })}
+              aria-current={active ? "page" : undefined}
+              className={`-mb-px border-b-2 pb-2.5 text-sm ${active ? "border-ink font-medium" : "border-transparent text-slate hover:text-ink"}`}
+            >
+              {t.label} <span className="tabular-nums text-slate">{t.n}</span>
+            </Link>
+          );
+        })}
       </div>
 
       <form className="flex flex-wrap items-center gap-2" action="/contracts">
-        <input name="q" defaultValue={sp.q} placeholder="파일명 검색" className={`${select} w-56`} />
-        <select name="category" defaultValue={sp.category ?? ""} className={select}>
-          <option value="">전체 유형</option>
+        {sp.verdict && <input type="hidden" name="verdict" value={sp.verdict} />}
+        <label className="sr-only" htmlFor="q">
+          검색
+        </label>
+        <input id="q" name="q" defaultValue={sp.q} placeholder="파일명으로 찾기" className={`${control} w-56`} />
+        <label className="sr-only" htmlFor="category">
+          유형
+        </label>
+        <select id="category" name="category" defaultValue={sp.category ?? ""} className={control}>
+          <option value="">모든 유형</option>
           {cats.map((c) => (
             <option key={c.classKey} value={c.classKey}>
-              {c.name}
+              {c.name} ({c.count})
             </option>
           ))}
         </select>
-        <select name="verdict" defaultValue={sp.verdict ?? ""} className={select}>
-          <option value="">전체 판정</option>
-          <option value="red">수정 필요</option>
-          <option value="yellow">확인 필요</option>
-          <option value="green">표준 부합</option>
-        </select>
-        <select name="language" defaultValue={sp.language ?? ""} className={select}>
-          <option value="">전체 언어</option>
+        <label className="sr-only" htmlFor="language">
+          언어
+        </label>
+        <select id="language" name="language" defaultValue={sp.language ?? ""} className={control}>
+          <option value="">모든 언어</option>
           {Object.entries(LANG).map(([k, v]) => (
             <option key={k} value={k}>
               {v}
             </option>
           ))}
         </select>
-        <button className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm text-white">적용</button>
-        <span className="ml-auto text-sm text-neutral-500">{rows.length}건</span>
+        <button className="h-9 rounded-md bg-ink px-4 text-sm font-medium text-white hover:bg-ink-soft">찾기</button>
+        {(sp.q || sp.category || sp.language) && (
+          <Link href={href({ q: undefined, category: undefined, language: undefined })} className="text-sm text-slate hover:text-ink">
+            조건 지우기
+          </Link>
+        )}
+        <span className="ml-auto text-sm text-slate">{rows.length}건</span>
       </form>
 
       {rows.length === 0 ? (
-        <Empty>조건에 맞는 계약서가 없습니다.</Empty>
+        <Empty>조건에 맞는 계약서가 없습니다. 조건을 지우고 다시 찾아보세요.</Empty>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white">
-          <table className="w-full min-w-[860px] text-sm">
-            <thead className="bg-neutral-50 text-left text-neutral-500">
+        <Panel className="overflow-x-auto">
+          <table className="w-full min-w-[900px] text-sm">
+            <thead className="border-b border-line text-left text-slate">
               <tr>
-                <th className="px-4 py-2 font-normal">계약서</th>
-                <th className="px-4 py-2 font-normal">유형</th>
-                <th className="px-4 py-2 font-normal">상대방</th>
-                <th className="px-4 py-2 text-right font-normal">금액</th>
-                <th className="px-4 py-2 font-normal">판정</th>
-                <th className="px-4 py-2 text-right font-normal">리스크 높음·중간</th>
+                <th className="px-4 py-2.5 font-normal">상대방</th>
+                <th className="px-4 py-2.5 font-normal">유형</th>
+                <th className="px-4 py-2.5 text-right font-normal">금액</th>
+                <th className="px-4 py-2.5 font-normal">리스크 높음 / 중간</th>
+                <th className="px-4 py-2.5 font-normal">판정</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-100">
+            <tbody className="divide-y divide-line">
               {rows.map((r) => (
-                <tr key={r.id} className="hover:bg-neutral-50">
-                  <td className="max-w-[320px] px-4 py-2">
-                    <Link href={`/contracts/${r.id}`} className="block truncate hover:underline" title={r.filename}>
-                      {r.filename}
+                <tr key={r.id} className="group hover:bg-paper">
+                  <td className="max-w-[340px] px-4 py-3">
+                    <Link href={`/contracts/${r.id}`} className="block truncate font-medium group-hover:underline" title={r.filename}>
+                      {r.counterparty || r.title || r.filename}
                     </Link>
-                    <span className="text-xs text-neutral-400">
-                      {LANG[r.language ?? ""] ?? r.language} · {r.folder}
+                    <span className="block truncate text-xs text-slate">
+                      {r.counterpartyType ? `${r.counterpartyType}, ` : ""}
+                      {LANG[r.language ?? ""] ?? r.language}
                     </span>
                   </td>
-                  <td className="px-4 py-2">
-                    {r.categoryName ?? "-"}
-                    {r.confidence != null && <span className="ml-1 text-xs text-neutral-400">{Math.round(r.confidence * 100)}%</span>}
+                  <td className="max-w-[260px] px-4 py-3">
+                    <span className="block truncate">{r.categoryName ?? "–"}</span>
+                    {r.confidence != null && r.confidence < 0.7 && <span className="text-xs text-caution">유형 판단 확인 필요</span>}
                   </td>
-                  <td className="px-4 py-2 text-neutral-600">{String(r.metadata.counterparty_type ?? "-")}</td>
-                  <td className="px-4 py-2 text-right tabular-nums text-neutral-600">{formatAmount(r.metadata.amount, r.metadata.currency)}</td>
-                  <td className="px-4 py-2">
-                    <VerdictBadge verdict={r.verdict} />
+                  <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-ink-soft">{formatAmount(r.amount, r.currency)}</td>
+                  <td className="px-4 py-3">
+                    <RiskBar high={r.high} medium={r.medium} low={r.low} scale={16} />
                   </td>
-                  <td className="px-4 py-2 text-right tabular-nums">
-                    <span className={r.high ? "text-red-700" : "text-neutral-400"}>{r.high ?? 0}</span>
-                    <span className="text-neutral-300"> · </span>
-                    <span className={r.medium ? "text-amber-700" : "text-neutral-400"}>{r.medium ?? 0}</span>
+                  <td className="px-4 py-3">
+                    <VerdictPill verdict={r.verdict} />
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </Panel>
       )}
     </div>
   );
