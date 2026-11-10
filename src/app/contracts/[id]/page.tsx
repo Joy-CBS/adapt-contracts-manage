@@ -140,7 +140,7 @@ export default async function ContractPage({ params, searchParams }: { params: P
               )}
               {subtype && category?.classKey === "others" && <span className="text-sm text-slate">· 세부 {subtype.nameKo}</span>}
               <Pill cls={cs.cls}>{cs.label}</Pill>
-              <LevelPill level={c.classification?.level} />
+              {c.classifyState === "suggested" && <LevelPill level={c.classification?.level} />}
               <EvidenceButton c={c.classification} names={names} />
             </div>
             <p className="mt-1.5 text-xs text-slate">
