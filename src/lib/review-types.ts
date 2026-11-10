@@ -267,6 +267,9 @@ export function decide(raw: RawReviewItem, entry: ChecklistEntry | undefined): P
     return grade === "low"
       ? { decision: "note", why: "참고 기준과 다르지만 경미한 항목입니다." }
       : { decision: "needs_lawyer", why: "이 유형은 어댑트 확정 표준이 없어, 유사 표준과 다른 점은 변호사가 판단합니다." };
+  // 플레이북 "추가 권고 조항" 중 [법무확정]은 법무팀이 계약서 반영을 지시한 조항이라, 빠져 있으면 모델 판단과 무관하게 수정 필요
+  if (raw.finding === "누락" && entry?.title.startsWith("추가 권고") && entry.tags.includes("[법무확정]"))
+    return { decision: "risk", why: "법무팀이 계약서 반영을 지시한 추가 조항([법무확정])이 없습니다." };
   if (raw.violates_confirmed && confirmed) return { decision: "risk", why: "법무팀 확정 기준이 결론까지 정해 둔 위반이라 수정이 필요합니다." };
   if (raw.within_allowed) return { decision: "ok", why: "기준과 다르지만 플레이북의 허용 가능 수정 범위 안입니다." };
   if (grade === "high") return { decision: "needs_lawyer", why: `${GRADE_KO.high} 조항의 ${raw.finding}입니다. 플레이북상 변호사 판단 대상입니다.` };
@@ -301,7 +304,7 @@ export function finalizeReview(raw: RawReview, checklist: ChecklistEntry[]): Rev
       lawyer_question:
         decision === "needs_lawyer" ? r.lawyer_question?.trim() || `${entry.title}: ${r.issue || "수용 여부를 확인해 주세요."}` : "",
       suggestion: decision === "risk" ? r.suggestion ?? "" : "",
-      suggestion_ko: decision === "risk" ? r.suggestion_ko ?? "" : "",
+      suggestion_ko: decision === "risk" ? r.suggestion_ko || (r.suggestion ? "" : `플레이북 권고 조항을 추가합니다: ${entry.body.replace(/^[A-Z]\.\s*/, "").slice(0, 400)}`) : "",
       flags: { violates_confirmed: !!r.violates_confirmed, matched_alert: !!r.matched_alert, within_allowed: !!r.within_allowed, uncertain: !!r.uncertain },
     });
   }

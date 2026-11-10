@@ -31,14 +31,16 @@ export function dbMode(): { mode: "neon" | "pglite" | "missing"; envVar?: string
   return process.env.VERCEL ? { mode: "missing" } : { mode: "pglite" };
 }
 
-let _db: Promise<DB> | undefined;
+// Next.js는 페이지·서버 액션을 다른 번들로 나눠 모듈 변수가 둘 이상 생길 수 있다.
+// 로컬 PGlite는 같은 폴더를 두 인스턴스가 열면 서로의 쓰기를 못 보므로 프로세스 전역에 하나만 둔다.
+const g = globalThis as unknown as { __acrDb?: Promise<DB> };
 
 export function db(): Promise<DB> {
-  if (!_db) {
-    _db = connect();
-    _db.catch(() => (_db = undefined)); // 실패하면 다음 요청에서 다시 시도
+  if (!g.__acrDb) {
+    g.__acrDb = connect();
+    g.__acrDb.catch(() => (g.__acrDb = undefined)); // 실패하면 다음 요청에서 다시 시도
   }
-  return _db;
+  return g.__acrDb;
 }
 
 async function connect(): Promise<DB> {
